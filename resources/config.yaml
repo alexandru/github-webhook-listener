@@ -1,0 +1,14 @@
+http:
+  path: "/"
+  port: 8080
+
+runtime:
+  workers: 2
+  output: stdout
+
+projects:
+  monix:
+    ref: "refs/heads/gh-pages"
+    directory: "/var/www/monix.io"
+    secret: "xxxxxxxxxxxxxxxxxxxx"
+    command: "git pull"
