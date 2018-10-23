@@ -7,7 +7,7 @@ runtime:
   output: stdout
 
 projects:
-  monix:
+  myproject:
     ref: "refs/heads/gh-pages"
     directory: "/var/www/domain.com"
     secret: "xxxxxxxxxxxxxxxxxxxx"
