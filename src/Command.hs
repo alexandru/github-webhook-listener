@@ -21,7 +21,7 @@ import qualified System.FileLock as FL
 
 startWorkers :: Int -> Chan Project -> LogHandle -> IO ()
 startWorkers n chan h =
-  () <$ sequence workers
+  sequence_ workers
   where
     consumer i = do
       Logger.logInfo h "Command" $ "Starting worker " <> (T.pack . show $ i)
