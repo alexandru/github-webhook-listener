@@ -6,19 +6,17 @@ module Command (startWorkers) where
 import AppConfig (Project(..))
 import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan)
-import Control.Exception (bracket_, catch, throwIO)
+import Control.Exception (catch)
 import Data.String (fromString)
 import Shelly (shelly, liftIO, bash_, chdir)
-import System.Directory (removeFile)
 import System.FilePath (joinPath)
-import System.IO.Error (isDoesNotExistError)
 import Text.Regex (splitRegex, mkRegex)
 import Logger (LogHandle)
 
 import qualified AppConfig as AC
 import qualified Control.Concurrent.Chan as Chan
 import qualified Data.Text as T
-import qualified Logger as Logger
+import qualified Logger
 import qualified System.FileLock as FL
 
 startWorkers :: Int -> Chan Project -> LogHandle -> IO ()
@@ -56,11 +54,7 @@ executeShellCommand project h =
     unsafeExecuteShellCommand project h
   where
     lockFile = joinPath [(T.unpack (AC.directory project)), ".webhook"]
-    withLock f =
-      bracket_
-      (return ())
-      (removeIfExists lockFile)
-      (FL.withFileLock lockFile FL.Exclusive (\_ -> f))
+    withLock f = FL.withFileLock lockFile FL.Exclusive (\_ -> f)
       
 {-|
   Internal API: executes the shell command without a file lock.
@@ -77,15 +71,3 @@ unsafeExecuteShellCommand Project{..} h = shelly $ do
         liftIO $ Logger.logInfo h "Command" "No shell command to execute"
     where
       commandAndArgs = splitRegex (mkRegex "[ \t]+") (T.unpack command)
-
-{-|
-  Internal API - deletes a file on disk only if it exists
-  (without throwing an exception if the path does not exist)
--}
-removeIfExists :: FilePath -> IO ()
-removeIfExists fileName =
-  removeFile fileName `catch` handleExists
-  where handleExists e
-          | isDoesNotExistError e = return ()
-          | otherwise = throwIO e
-          

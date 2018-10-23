@@ -13,14 +13,14 @@ import Network.HTTP.Types (status200, status404, status204, status403)
 import Web.Scotty
 
 import qualified AppConfig as Cfg
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as DT
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Text.Lazy as DTL
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
+import qualified Logger
 import qualified Payload as P
-import qualified Logger as Logger
 
 ping :: DT.Text -> ScottyM ()
 ping path =

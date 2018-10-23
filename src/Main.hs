@@ -11,7 +11,7 @@ import Logger (LogHandle)
 import qualified AppConfig as Cfg
 import qualified Command as Command
 import qualified Control.Concurrent.Chan as Chan
-import qualified Logger as Logger
+import qualified Logger
 
 main :: IO ()
 main = do

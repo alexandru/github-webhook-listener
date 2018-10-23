@@ -9,6 +9,6 @@ runtime:
 projects:
   monix:
     ref: "refs/heads/gh-pages"
-    directory: "/var/www/monix.io"
+    directory: "/var/www/domain.com"
     secret: "xxxxxxxxxxxxxxxxxxxx"
     command: "git pull"
