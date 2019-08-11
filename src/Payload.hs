@@ -84,20 +84,18 @@ parsePayload text =
 
 validatePayload :: Project -> Maybe Payload -> Maybe Text -> Text -> ValidateResult
 validatePayload _ Nothing _ _ = SkipExecution
-validatePayload project (Just p) sigHead body =
-  if not (isAuthenticated (C.secret project) sigHead body) then
+validatePayload project (Just p) sigHead body
+  | not (isAuthenticated (C.secret project) sigHead body) =
      FailedAuthentication
-  else if (action p) /= expectedAction then
+  | action p /= expectedAction || ref p /= expectedRef =
     SkipExecution
-  else if (ref p) /= expectedRef then
-    SkipExecution
-  else
+  | otherwise =
     Execute
   where
     expectedAction = 
-      PAction <$> mfilter (\a -> a /= "push") (C.action project)
+      PAction <$> mfilter (/= "push") (C.action project)
     expectedRef =
-      PRef <$> (C.ref project)
+      PRef <$> C.ref project
 
 isAuthenticated :: Maybe Text -> Maybe Text -> Text -> Bool
 isAuthenticated key sigHead body =
@@ -107,7 +105,7 @@ isAuthenticated key sigHead body =
       case sigHead of
         Just sig ->
           let (header, rest) = T.splitAt 5 sig in
-          header == "sha1=" && rest == (T.pack digest)
+          header == "sha1=" && rest == T.pack digest
         _ ->
           False
       where

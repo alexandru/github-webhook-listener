@@ -11,13 +11,13 @@ import Data.Semigroup ((<>))
 import System.Directory (doesFileExist)
 
 -- |Models command line arguments
-data AppArgs = AppArgs
-  { 
+newtype AppArgs = AppArgs
+  {
     configPath :: FilePath
   } deriving (Show)
 
 -- |Thrown in case the given `configFile` does not exist
-data ConfigFileDoesNotExistsException =
+newtype ConfigFileDoesNotExistsException =
   ConfigFileDoesNotExistsException String
   deriving Show
 

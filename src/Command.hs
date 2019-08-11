@@ -27,13 +27,13 @@ startWorkers n chan h =
       Logger.logInfo h "Command" $ "Starting worker " <> (T.pack . show $ i)
       consumeFromChan chan h
     workers =
-      fmap (\i -> forkIO $ consumer i) (enumFromTo 1 n)
+      fmap (forkIO . consumer) (enumFromTo 1 n)
 
 consumeFromChan :: Chan Project -> LogHandle -> IO ()
 consumeFromChan chan h =
   do
     command <- Chan.readChan chan
-    executeShellCommand command h `catch` (Logger.logCaughtError h "Command")
+    executeShellCommand command h `catch` Logger.logCaughtError h "Command"
     consumeFromChan chan h -- continue
 
 {-|
@@ -53,21 +53,21 @@ executeShellCommand project h =
   withLock $
     unsafeExecuteShellCommand project h
   where
-    lockFile = joinPath [(T.unpack (AC.directory project)), ".webhook"]
-    withLock f = FL.withFileLock lockFile FL.Exclusive (\_ -> f)
-      
+    lockFile = joinPath [T.unpack (AC.directory project), ".webhook"]
+    withLock f = FL.withFileLock lockFile FL.Exclusive (const f)
+
 {-|
   Internal API: executes the shell command without a file lock.
 -}
 unsafeExecuteShellCommand :: Project -> LogHandle -> IO ()
 unsafeExecuteShellCommand Project{..} h = shelly $ do
   liftIO $ Logger.logInfo h "Command" $ "Executing: chdir " <> directory
-  chdir (fromString . T.unpack $ directory) $ do
+  chdir (fromString . T.unpack $ directory) $
     case commandAndArgs of
       x : xs -> do
         liftIO $ Logger.logInfo h "Command" $ "Executing: " <> command
         bash_ (fromString x) (fmap T.pack xs)
-      [] -> do
+      [] ->
         liftIO $ Logger.logInfo h "Command" "No shell command to execute"
     where
       commandAndArgs = splitRegex (mkRegex "[ \t]+") (T.unpack command)

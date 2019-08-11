@@ -24,15 +24,15 @@ import qualified Payload as P
 
 ping :: DT.Text -> ScottyM ()
 ping path =
-  get (fromString $ DT.unpack path) $ do
-    html $ "Pong!"
+  get (fromString $ DT.unpack path) $
+    html "Pong!"
 
 processKey :: DT.Text -> Map Text Cfg.Project -> Chan Cfg.Project -> LogHandle -> ScottyM ()
 processKey path projects chan h =
   post (fromString route) $ do
     key <- param "key"
     liftIO $ Logger.logInfo h "Controller" $ "POST " <> path <> key
-    case (Map.lookup key projects) of
+    case Map.lookup key projects of
       Nothing -> send404 key
       Just project -> process key project
   where
@@ -46,7 +46,7 @@ processKey path projects chan h =
       let action = payload >>= P.action
       let ref = payload >>= P.ref
 
-      case (P.validatePayload project payload hubSig bodyText) of
+      case P.validatePayload project payload hubSig bodyText of
         P.Execute -> do
           liftIO $ Logger.logInfo h "Controller" $ "Executing shell command for key: " <> key          
           liftIO $ writeChan chan project
@@ -55,8 +55,8 @@ processKey path projects chan h =
         P.SkipExecution -> do
           liftIO $ Logger.logInfo h "Controller" $
             "Nothing to do for key: " <>  key <> ", action: " 
-            <> (P.actionLog action) <> " and ref: " 
-            <> (P.refLog ref)
+            <> P.actionLog action <> " and ref: " 
+            <> P.refLog ref
           status status204
         P.FailedAuthentication -> do
           liftIO $ Logger.logWarn h "Controller" $ "Validation failed for signature: " <> (DT.pack . show $ hubSig)
@@ -69,7 +69,7 @@ processKey path projects chan h =
       text "404 Not Found"
 
     getHeader name =
-      fmap (fmap (DTE.decodeUtf8 . lazyToStrict . encodeUtf8)) $
+      fmap (DTE.decodeUtf8 . lazyToStrict . encodeUtf8) <$>
         header name
       where
         lazyToStrict = BS.concat . BSL.toChunks

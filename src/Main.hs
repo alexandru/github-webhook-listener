@@ -9,7 +9,7 @@ import System.IO (stdout, stderr, withFile, IOMode(AppendMode))
 import Logger (LogHandle)
 
 import qualified AppConfig as Cfg
-import qualified Command as Command
+import qualified Command
 import qualified Control.Concurrent.Chan as Chan
 import qualified Logger
 
@@ -17,7 +17,7 @@ main :: IO ()
 main = do
   args <- getCmdLineArgs
   appConfig <- Cfg.readAppConfig (configPath args)
-  let output = (Cfg.output . Cfg.runtime $ appConfig)
+  let output = Cfg.output . Cfg.runtime $ appConfig
   case output of
     "stdout" ->
       run appConfig stdout
