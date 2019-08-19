@@ -20,6 +20,6 @@ on under-powered servers.
 
 ## License
 
-Copyright ©2018 Alexandru Nedelcu
+Copyright ©2019 Alexandru Nedelcu
 
 See [LICENSE](./LICENSE).
