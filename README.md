@@ -1,6 +1,8 @@
 # github-webhook-listener
 
-A simple web app that can be registered as a 
+[![CircleCI](https://circleci.com/gh/alexandru/github-webhook-listener.svg?style=svg)](https://circleci.com/gh/alexandru/github-webhook-listener)
+
+A simple web app that can be registered as a
 [GitHub Webhook](https://developer.github.com/webhooks/)
 and trigger shell commands in response to events.
 
