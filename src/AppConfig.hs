@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module AppConfig (
   All (..),
@@ -8,7 +9,6 @@ module AppConfig (
   readAppConfig) where
 
 import Data.Map (Map)
-import Data.String (fromString)
 import Data.Text
 import Data.Yaml (FromJSON, decodeFileThrow)
 import GHC.Generics
@@ -68,4 +68,4 @@ instance FromJSON Runtime
 readAppConfig :: FilePath -> IO All
 readAppConfig filePath = do
   absolute <- makeAbsolute filePath
-  decodeFileThrow (fromString absolute)
+  decodeFileThrow absolute
