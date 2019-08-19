@@ -1,44 +1,83 @@
-name:                github-webhook-listener
-version:             0.1.0.0
--- synopsis:
--- description:
-homepage:            https://github.com/alexandru/github-webhook-listener#readme
-license:             BSD3
-license-file:        LICENSE
-author:              Alexandru Nedelcu
-maintainer:          noreply@alexn.org
-copyright:           2018 Alexandru Nedelcu
-category:            Web
-build-type:          Simple
-cabal-version:       >=1.10
-extra-source-files:  README.md
+cabal-version: 1.12
 
-executable github-webhook-listener
-  hs-source-dirs:      src
-  main-is:             Main.hs
-  default-language:    Haskell2010
-  ghc-options:         -threaded -Wall -Werror
-  build-depends:       base >= 4.7 && < 5
-                     , SHA
-                     , aeson
-                     , blaze-builder
-                     , bytestring
-                     , containers
-                     , directory
-                     , filelock
-                     , filepath
-                     , http-types
-                     , optparse-applicative
-                     , regex-compat
-                     , scotty
-                     , shelly
-                     , text
-                     , time
-                     , yaml
-                                   
-  other-modules:     AppConfig
-                   , CmdLine
-                   , Command
-                   , Controller
-                   , Logger
-                   , Payload
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: e1f1443ff11518d2be450b6954b3705d939bd3d4e06133ab1be12dd24564265c
+
+name:           github-webhook-listener
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/github-webhook-listener#readme>
+homepage:       https://github.com/alexandru/github-webhook-listener#readme
+bug-reports:    https://github.com/alexandru/github-webhook-listener/issues
+author:         Alexandru Nedelcu
+maintainer:     noreply@alexn.org
+copyright:      2018-2019 Alexandru Nedelcu
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/alexandru/github-webhook-listener
+
+library
+  other-modules:
+      Paths_github_webhook_listener
+  hs-source-dirs:
+      src
+  default-language: Haskell2010
+  build-depends: base >=4.7 && <5
+               , SHA
+               , aeson
+               , blaze-builder
+               , bytestring
+               , containers
+               , directory
+               , filelock
+               , filepath
+               , http-types
+               , optparse-applicative
+               , regex-compat
+               , scotty
+               , shelly
+               , text
+               , time
+               , yaml
+
+  exposed-modules: AppConfig
+                 , CmdLine
+                 , Command
+                 , Controller
+                 , Logger
+                 , Payload
+
+executable github-webhook-listener-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_github_webhook_listener
+  hs-source-dirs:
+      app
+  default-language: Haskell2010
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
+  build-depends:
+      base >=4.7 && <5
+    , github-webhook-listener
+
+test-suite github-webhook-listener-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_github_webhook_listener
+  hs-source-dirs:
+      test
+  default-language: Haskell2010
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
+  build-depends:
+      base >=4.7 && <5
+    , github-webhook-listener
+
