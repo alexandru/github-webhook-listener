@@ -18,8 +18,10 @@ license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
-    README.md
-    ChangeLog.md
+  README.md
+  ChangeLog.md
+data-files:
+  resources/*.yaml
 
 source-repository head
   type: git
@@ -27,34 +29,36 @@ source-repository head
 
 library
   other-modules:
-      Paths_github_webhook_listener
+    Paths_github_webhook_listener
   hs-source-dirs:
-      src
+    src
   default-language: Haskell2010
-  build-depends: base >=4.7 && <5
-               , SHA
-               , aeson
-               , blaze-builder
-               , bytestring
-               , containers
-               , directory
-               , filelock
-               , filepath
-               , http-types
-               , optparse-applicative
-               , regex-compat
-               , scotty
-               , shelly
-               , text
-               , time
-               , yaml
+  build-depends:
+      base >=4.7 && <5
+    , SHA
+    , aeson
+    , blaze-builder
+    , bytestring
+    , containers
+    , directory
+    , filelock
+    , filepath
+    , http-types
+    , optparse-applicative
+    , regex-compat
+    , scotty
+    , shelly
+    , text
+    , time
+    , yaml
 
-  exposed-modules: AppConfig
-                 , CmdLine
-                 , Command
-                 , Controller
-                 , Logger
-                 , Payload
+  exposed-modules:
+      AppConfig
+    , CmdLine
+    , Command
+    , Controller
+    , Logger
+    , Payload
 
 executable github-webhook-listener-exe
   main-is: Main.hs
@@ -70,14 +74,18 @@ executable github-webhook-listener-exe
 
 test-suite github-webhook-listener-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
       Paths_github_webhook_listener
+    , AppConfigSpec
   hs-source-dirs:
-      test
+    test
   default-language: Haskell2010
   ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
   build-depends:
       base >=4.7 && <5
+    , containers
+    , filepath
     , github-webhook-listener
+    , hspec
 
