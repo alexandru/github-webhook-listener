@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Controller (startServer) where
+module Controller (ping, processKey) where
 
 import Control.Concurrent.Chan (Chan, writeChan)
 import Control.Monad.IO.Class (liftIO)
@@ -73,12 +73,3 @@ processKey path projects chan h =
         header name
       where
         lazyToStrict = BS.concat . BSL.toChunks
-
-startServer :: Cfg.All -> Chan Cfg.Project -> LogHandle -> IO ()
-startServer config chan h =
-  scotty port $
-    ping path >>
-    processKey path (Cfg.projects config) chan h
-  where
-    port = fromInteger (toInteger (Cfg.port . Cfg.http $ config))
-    path = Cfg.path . Cfg.http $ config

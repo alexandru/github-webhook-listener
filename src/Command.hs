@@ -4,7 +4,7 @@
 module Command (startWorkers) where
 
 import AppConfig (Project(..))
-import Control.Concurrent (forkIO)
+import Control.Concurrent (ThreadId, forkIO)
 import Control.Concurrent.Chan (Chan)
 import Control.Exception (catch)
 import Data.String (fromString)
@@ -19,9 +19,21 @@ import qualified Data.Text as T
 import qualified Logger
 import qualified System.FileLock as FL
 
-startWorkers :: Int -> Chan Project -> LogHandle -> IO ()
+{-| Starts background workers that consume from the message channel and
+execute commands.
+-}
+-- startWorkers
+--   :: Int          -- ^ number of workers to start
+--   -> Chan Project -- ^ the channel used for messaging
+--   -> LogHandle    -- ^ used for logging
+--   -> IO ()
+startWorkers
+  :: Int
+  -> Chan Project
+  -> LogHandle
+  -> IO [ThreadId]
 startWorkers n chan h =
-  sequence_ workers
+  sequence workers
   where
     consumer i = do
       Logger.logInfo h "Command" $ "Starting worker " <> (T.pack . show $ i)
@@ -29,7 +41,10 @@ startWorkers n chan h =
     workers =
       fmap (forkIO . consumer) (enumFromTo 1 n)
 
-consumeFromChan :: Chan Project -> LogHandle -> IO ()
+consumeFromChan
+  :: Chan Project
+  -> LogHandle
+  -> IO ()
 consumeFromChan chan h =
   do
     command <- Chan.readChan chan
@@ -48,7 +63,10 @@ consumeFromChan chan h =
   If the program terminate in error, then this function will throw
   an exception.
 -}
-executeShellCommand :: Project -> LogHandle -> IO ()
+executeShellCommand
+  :: Project
+  -> LogHandle
+  -> IO ()
 executeShellCommand project h =
   withLock $
     unsafeExecuteShellCommand project h
@@ -59,7 +77,10 @@ executeShellCommand project h =
 {-|
   Internal API: executes the shell command without a file lock.
 -}
-unsafeExecuteShellCommand :: Project -> LogHandle -> IO ()
+unsafeExecuteShellCommand
+  :: Project
+  -> LogHandle
+  -> IO ()
 unsafeExecuteShellCommand Project{..} h = shelly $ do
   liftIO $ Logger.logInfo h "Command" $ "Executing: chdir " <> directory
   chdir (fromString . T.unpack $ directory) $
