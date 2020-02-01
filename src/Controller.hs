@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StrictData #-}
 
 module Controller (ping, processKey) where
 
@@ -37,32 +38,32 @@ processKey path projects chan h =
       Just project -> process key project
   where
     route = DT.unpack (path <> ":key")
-    
+
     process key project = do
       b <- body
       hubSig <- getHeader "X-Hub-Signature"
-      let bodyText = DTL.toStrict $ decodeUtf8 b      
+      let bodyText = DTL.toStrict $ decodeUtf8 b
       let payload = P.parsePayload bodyText
       let action = payload >>= P.action
       let ref = payload >>= P.ref
 
       case P.validatePayload project payload hubSig bodyText of
         P.Execute -> do
-          liftIO $ Logger.logInfo h "Controller" $ "Executing shell command for key: " <> key          
+          liftIO $ Logger.logInfo h "Controller" $ "Executing shell command for key: " <> key
           liftIO $ writeChan chan project
           status status200
-          text "Ok"          
+          text "Ok"
         P.SkipExecution -> do
           liftIO $ Logger.logInfo h "Controller" $
-            "Nothing to do for key: " <>  key <> ", action: " 
-            <> P.actionLog action <> " and ref: " 
+            "Nothing to do for key: " <>  key <> ", action: "
+            <> P.actionLog action <> " and ref: "
             <> P.refLog ref
           status status204
         P.FailedAuthentication -> do
           liftIO $ Logger.logWarn h "Controller" $ "Validation failed for signature: " <> (DT.pack . show $ hubSig)
           status status403
           text "403 Forbidden"
-      
+
     send404 key = do
       liftIO $ Logger.logWarn h "Controller" $ "404 Not Found: " <> key
       status status404

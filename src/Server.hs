@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StrictData #-}
 
 module Server (run) where
 
@@ -53,4 +54,4 @@ safeBracket
   -> (a -> IO c) -- ^ use
   -> IO c
 safeBracket ini fin =
-  bracket (uninterruptibleMask_ ini) (uninterruptibleMask_ . fin) 
+  bracket (uninterruptibleMask_ ini) (uninterruptibleMask_ . fin)
