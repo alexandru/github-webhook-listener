@@ -1,6 +1,6 @@
 # github-webhook-listener
 
-[![CircleCI](https://circleci.com/gh/alexandru/github-webhook-listener.svg?style=svg)](https://circleci.com/gh/alexandru/github-webhook-listener)
+[![Build](https://github.com/alexandru/github-webhook-listener/workflows/build/badge.svg?branch=master)](https://github.com/alexandru/github-webhook-listener/actions?query=branch%3Amaster+workflow%3Abuild)
 
 A simple web app that can be registered as a
 [GitHub Webhook](https://developer.github.com/webhooks/)
@@ -20,6 +20,6 @@ on under-powered servers.
 
 ## License
 
-Copyright ©2019 Alexandru Nedelcu
+Copyright © 2018-2020 Alexandru Nedelcu, some rights reserved.
 
-See [LICENSE](./LICENSE).
+Licensed under the 3-Clause BSD License. See [LICENSE](./LICENSE).
