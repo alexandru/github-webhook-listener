@@ -20,6 +20,6 @@ on under-powered servers.
 
 ## License
 
-Copyright © 2019-2020 Alexandru Nedelcu
+Copyright © 2018-2020 Alexandru Nedelcu, some rights reserved.
 
-See [LICENSE](./LICENSE).
+Licensed under the 3-Clause BSD License. See [LICENSE](./LICENSE).
