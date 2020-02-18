@@ -13,7 +13,7 @@ homepage:       https://github.com/alexandru/github-webhook-listener#readme
 bug-reports:    https://github.com/alexandru/github-webhook-listener/issues
 author:         Alexandru Nedelcu
 maintainer:     noreply@alexn.org
-copyright:      2018-2019 Alexandru Nedelcu
+copyright:      2018-2020 Alexandru Nedelcu
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
