@@ -1,0 +1,18 @@
+name: build
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - uses: actions/checkout@master
+      - uses: mstksg/setup-stack@v1
+
+      - name: Resolve/Update Dependencies
+        run: |
+          stack --no-terminal setup
+
+      - name: Run tests
+        run: |
+          stack --no-terminal test

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StrictData #-}
 
 module Payload (
   Payload(..),
@@ -74,13 +75,13 @@ refLog (Just (PRef r)) = r
 data ValidateResult =
     Execute              -- ^ Command can be executed
   | SkipExecution        -- ^ Failed conditions (e.g. ref / action)
-  | FailedAuthentication -- ^ Failed authentication (e.g. signature) 
+  | FailedAuthentication -- ^ Failed authentication (e.g. signature)
   deriving (Eq, Show)
 
 -- | For parsing a text into a 'Payload'
 parsePayload :: Text -> Maybe Payload
 parsePayload text =
-  decode (DTLE.encodeUtf8 (fromStrict text)) 
+  decode (DTLE.encodeUtf8 (fromStrict text))
 
 validatePayload :: Project -> Maybe Payload -> Maybe Text -> Text -> ValidateResult
 validatePayload _ Nothing _ _ = SkipExecution
@@ -92,7 +93,7 @@ validatePayload project (Just p) sigHead body
   | otherwise =
     Execute
   where
-    expectedAction = 
+    expectedAction =
       PAction <$> mfilter (/= "push") (C.action project)
     expectedRef =
       PRef <$> C.ref project
