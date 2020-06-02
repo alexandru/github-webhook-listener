@@ -1,5 +1,5 @@
 NAME   := alexelcu/github-webhook-listener
-TAG    := $$(git log -1 --pretty=%h)
+TAG    := $$(./scripts/new-version)
 IMG    := ${NAME}:${TAG}
 LATEST := ${NAME}:latest
 
@@ -9,6 +9,3 @@ build:
 
 push:
 	docker push ${NAME}
-
-login:
-	docker log -u ${DOCKER_USER} -p ${DOCKER_PASS}
