@@ -8,7 +8,6 @@ module CmdLine (
 import Control.Exception (Exception)
 import Control.Exception.Base (throwIO)
 import Options.Applicative
-import Data.Semigroup ((<>))
 import System.Directory (doesFileExist)
 
 -- |Models command line arguments

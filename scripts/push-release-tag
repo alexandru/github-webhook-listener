@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -e
+
+TAG="v$(date +%Y%m%d-%H%M)"
+git tag "$TAG"
+git push origin "$TAG"

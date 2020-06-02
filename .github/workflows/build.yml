@@ -3,11 +3,20 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
       - uses: actions/checkout@master
       - uses: mstksg/setup-stack@v1
+
+      - uses: actions/cache@v2
+        name: Cache ~/.stack
+        with:
+          key: ${{ runner.os }}-stack-${{ hashFiles('**/stack.yaml.lock') }}-${{ hashFiles('**/github-webhook-listener.cabal') }}
+          restore-keys: |
+            ${{ runner.os }}-stack-
+          path: |
+            ~/.stack
 
       - name: Resolve/Update Dependencies
         run: |
