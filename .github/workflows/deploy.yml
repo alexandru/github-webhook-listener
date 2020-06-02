@@ -11,21 +11,21 @@ jobs:
     steps:
     - uses: actions/checkout@master
 
-    - name: Install Docker 19.03.2
+    - name: Install Docker
       run: |
         sudo apt-get install docker.io -y
 
     - name: Login to Docker
-      run: docker login --username=$DOCKER_USER  --password=$DOCKER_PASS
+      run: sudo docker login --username=$DOCKER_USER  --password=$DOCKER_PASS
       env:
         DOCKER_USER: ${{ secrets.DOCKER_USER }}
         DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
 
     - name: Build Docker image
       run: |
-        make build
+        sudo make build
 
     - name: Push Docker image
       run: |
-        make push
+        sudo make push
   
