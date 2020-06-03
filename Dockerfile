@@ -21,3 +21,5 @@ RUN apt-get upgrade -y
 RUN apt-get autoremove -y
 
 COPY --from=build /opt/build/bin .
+
+CMD [ "github-webhook-listener-exe", "-c", "$CONFIG_PATH" ]
