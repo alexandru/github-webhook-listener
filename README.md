@@ -1,6 +1,6 @@
 # github-webhook-listener
 
-[![Build](https://github.com/alexandru/github-webhook-listener/workflows/build/badge.svg?branch=master)](https://github.com/alexandru/github-webhook-listener/actions?query=branch%3Amaster+workflow%3Abuild)
+[![Build](https://github.com/alexandru/github-webhook-listener/workflows/build/badge.svg?branch=master)](https://github.com/alexandru/github-webhook-listener/actions?query=branch%3Amaster+workflow%3Abuild) [![Deploy](https://github.com/alexandru/github-webhook-listener/workflows/deploy/badge.svg)](https://github.com/alexandru/github-webhook-listener/actions?query=workflow%3Adeploy)
 
 A simple web app that can be registered as a
 [GitHub Webhook](https://developer.github.com/webhooks/)
