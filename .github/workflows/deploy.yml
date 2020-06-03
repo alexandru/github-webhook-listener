@@ -24,6 +24,8 @@ jobs:
     - name: Build Docker image
       run: |
         sudo make build
+      env:
+        GIT_TAG: ${{ github.ref }}
 
     - name: Push Docker image
       run: |

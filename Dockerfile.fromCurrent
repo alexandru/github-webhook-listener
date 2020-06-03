@@ -1,0 +1,6 @@
+FROM alexelcu/github-webhook-listener:latest as app
+
+RUN mkdir -p /opt/app/config
+COPY ./resources/config-sample.yaml /opt/app/config/config.yaml
+
+CMD [ "/opt/app/github-webhook-listener-exe", "-c", "/opt/app/config/config.yaml" ]

@@ -21,3 +21,8 @@ RUN apt-get upgrade -y
 RUN apt-get autoremove -y
 
 COPY --from=build /opt/build/bin .
+
+RUN mkdir -p /opt/app/config
+COPY ./resources/config-sample.yaml /opt/app/config/config.yaml
+
+CMD [ "/opt/app/github-webhook-listener-exe", "-c", "/opt/app/config/config.yaml" ]
