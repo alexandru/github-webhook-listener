@@ -22,4 +22,7 @@ RUN apt-get autoremove -y
 
 COPY --from=build /opt/build/bin .
 
-CMD [ "github-webhook-listener-exe", "-c", "$CONFIG_PATH" ]
+RUN mkdir -p /opt/app/config
+COPY ./resources/config-sample.yaml /opt/app/config/config.yaml
+
+CMD [ "/opt/app/github-webhook-listener-exe", "-c", "/opt/app/config/config.yaml" ]
