@@ -16,7 +16,7 @@ RUN mkdir -p /opt/app
 WORKDIR /opt/app
 
 RUN apt-get update
-RUN apt-get install git curl -y
+RUN apt-get install git curl jq -y
 RUN apt-get upgrade -y
 RUN apt-get autoremove -y
 
