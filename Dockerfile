@@ -1,4 +1,4 @@
-FROM fpco/stack-build:lts-15.15 as build
+FROM fpco/stack-build:lts-16.10 as build
 
 COPY . /opt/build/
 
@@ -16,7 +16,7 @@ RUN mkdir -p /opt/app
 WORKDIR /opt/app
 
 RUN apt-get update
-RUN apt-get install git -y
+RUN apt-get install git curl -y
 RUN apt-get upgrade -y
 RUN apt-get autoremove -y
 

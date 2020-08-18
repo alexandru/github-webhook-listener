@@ -7,7 +7,7 @@ cabal-version: 1.12
 -- hash: e1f1443ff11518d2be450b6954b3705d939bd3d4e06133ab1be12dd24564265c
 
 name:           github-webhook-listener
-version:        0.1.0.0
+version:        0.1.0.1
 description:    Please see the README on GitHub at <https://github.com/githubuser/github-webhook-listener#readme>
 homepage:       https://github.com/alexandru/github-webhook-listener#readme
 bug-reports:    https://github.com/alexandru/github-webhook-listener/issues
