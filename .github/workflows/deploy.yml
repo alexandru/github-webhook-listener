@@ -12,6 +12,7 @@ jobs:
 
     - name: Install Docker
       run: |
+        sudo apt-get remove docker* containerd*
         sudo apt-get install docker.io -y
 
     - name: Login to Docker
