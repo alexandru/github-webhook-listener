@@ -7,7 +7,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@master
-      - uses: mstksg/setup-stack@v1
+      - uses: mstksg/setup-stack@v2
 
       - uses: actions/cache@v2
         name: Cache ~/.stack
