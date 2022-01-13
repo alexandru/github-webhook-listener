@@ -130,6 +130,6 @@ NOTEs on those fields:
 
 ## License
 
-Copyright © 2018-2020 Alexandru Nedelcu, some rights reserved.
+Copyright © 2018-2022 Alexandru Nedelcu, some rights reserved.
 
 Licensed under the 3-Clause BSD License. See [LICENSE](./LICENSE).
