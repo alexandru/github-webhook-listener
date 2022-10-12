@@ -50,6 +50,10 @@
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
+  "name":"com.sun.crypto.provider.HmacSHA1",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
   "name":"com.sun.org.apache.xerces.internal.jaxp.SAXParserFactoryImpl",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
@@ -61,11 +65,6 @@
 },
 {
   "name":"java.lang.RuntimePermission"
-},
-{
-  "name":"java.lang.String",
-  "allDeclaredFields":true,
-  "allDeclaredClasses":true
 },
 {
   "name":"java.net.NetPermission"
@@ -85,12 +84,6 @@
 },
 {
   "name":"java.security.SecurityPermission"
-},
-{
-  "name":"java.util.List"
-},
-{
-  "name":"java.util.Map"
 },
 {
   "name":"java.util.PropertyPermission"
@@ -135,6 +128,10 @@
   "name":"org.alexn.hook.MainKt$main$1$server$1",
   "queryAllPublicMethods":true,
   "queryAllDeclaredConstructors":true
+},
+{
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
 },
 {
   "name":"sun.security.provider.SHA2$SHA256",

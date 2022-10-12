@@ -26,7 +26,7 @@ fun main() = runBlocking {
     """.trimIndent()
 
     val client = HttpClient(CIO)
-    val response =
+    val response1 =
         client.post("http://localhost:8080/myproject") {
             headers {
                 append(HttpHeaders.ContentType, "application/json")
@@ -37,5 +37,31 @@ fun main() = runBlocking {
             }
             setBody(bodyText)
         }
-    println("HTTP ${response.status}: ${response.bodyAsText()}")
+    println("HTTP ${response1.status}: ${response1.bodyAsText()}")
+    //--------
+    val response2 =
+        client.post("http://localhost:8080/myproject") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+                append(
+                    "X-Hub-Signature",
+                    "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, signKey).hmacHex(bodyText)
+                )
+            }
+            setBody(bodyText)
+        }
+    println("HTTP ${response2.status}: ${response2.bodyAsText()}")
+    //--------
+    val response3 =
+        client.post("http://localhost:8080/notAvailable") {
+            headers {
+                append(HttpHeaders.ContentType, "application/json")
+                append(
+                    "X-Hub-Signature",
+                    "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, signKey).hmacHex(bodyText)
+                )
+            }
+            setBody(bodyText)
+        }
+    println("HTTP ${response3.status}: ${response3.bodyAsText()}")
 }

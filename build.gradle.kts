@@ -15,12 +15,13 @@ version = "0.0.1"
 application {
     mainClass.set("org.alexn.hook.MainKt")
 
-    val isDevelopment: Boolean = project.ext.has("development")
-    applicationDefaultJvmArgs = listOf(
-        "-Dio.ktor.development=$isDevelopment",
-        // https://www.graalvm.org/22.0/reference-manual/native-image/Agent/
-        // "-agentlib:native-image-agent=config-output-dir=./src/main/resources/META-INF/native-image"
-    )
+    if (project.ext.has("development")) {
+        applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")
+    }
+    // https://www.graalvm.org/22.0/reference-manual/native-image/Agent/
+    if (project.ext.has("nativeAgent")) {
+        applicationDefaultJvmArgs = listOf("-agentlib:native-image-agent=config-output-dir=./src/main/resources/META-INF/native-image")
+    }
 }
 
 // https://ktor.io/docs/graalvm.html#execute-the-native-image-tool
@@ -76,7 +77,6 @@ tasks {
     }
 
     test {
-        jvmArgs("-agentlib:native-image-agent=config-output-dir=./src/main/resources/META-INF/native-image")
     }
 }
 

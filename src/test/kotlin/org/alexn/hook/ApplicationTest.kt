@@ -59,14 +59,16 @@ class ApplicationTest {
                 javaClass.getResourceAsStream("/real-payload.json")?.readAllBytes()?.toString(StandardCharsets.UTF_8)
                     ?: throw FileNotFoundException("/resources/real-payload.json")
             }
-            block(Helpers(
-                project = project,
-                json = json,
-                hmacSha512 = "sha512=" + HmacUtils(HmacAlgorithms.HMAC_SHA_512, project.secret).hmacHex(json),
-                hmacSha256 = "sha256=" + HmacUtils(HmacAlgorithms.HMAC_SHA_256, project.secret).hmacHex(json),
-                hmacSha1 = "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, project.secret).hmacHex(json),
-                createdFile = File(tmpDir, "i-was-here.txt")
-            ))
+            block(
+                Helpers(
+                    project = project,
+                    json = json,
+                    hmacSha512 = "sha512=" + HmacUtils(HmacAlgorithms.HMAC_SHA_512, project.secret).hmacHex(json),
+                    hmacSha256 = "sha256=" + HmacUtils(HmacAlgorithms.HMAC_SHA_256, project.secret).hmacHex(json),
+                    hmacSha1 = "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, project.secret).hmacHex(json),
+                    createdFile = File(tmpDir, "i-was-here.txt")
+                )
+            )
         } finally {
             tmpDir.deleteRecursively()
         }

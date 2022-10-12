@@ -8,27 +8,6 @@
       "pattern":"\\QMETA-INF/services/kotlin.reflect.jvm.internal.impl.resolve.ExternalOverridabilityCondition\\E"
     }, 
     {
-      "pattern":"\\Qkotlin/annotation/annotation.kotlin_builtins\\E"
-    }, 
-    {
-      "pattern":"\\Qkotlin/collections/collections.kotlin_builtins\\E"
-    }, 
-    {
-      "pattern":"\\Qkotlin/coroutines/coroutines.kotlin_builtins\\E"
-    }, 
-    {
-      "pattern":"\\Qkotlin/internal/internal.kotlin_builtins\\E"
-    }, 
-    {
-      "pattern":"\\Qkotlin/kotlin.kotlin_builtins\\E"
-    }, 
-    {
-      "pattern":"\\Qkotlin/ranges/ranges.kotlin_builtins\\E"
-    }, 
-    {
-      "pattern":"\\Qkotlin/reflect/reflect.kotlin_builtins\\E"
-    }, 
-    {
       "pattern":"\\Qlogback.xml\\E"
     }, 
     {
