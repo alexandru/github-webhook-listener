@@ -54,7 +54,7 @@ class CommandTrigger private constructor(
                     meta = mapOf(
                         "exit-code" to result.exitCode.toString(),
                         "stdout" to result.stdout,
-                        "stderr" to result.stdout,
+                        "stderr" to result.stderr,
                     )
                 ).left()
         } catch (e: TimeoutCancellationException) {
