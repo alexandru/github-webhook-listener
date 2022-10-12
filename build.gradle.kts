@@ -74,6 +74,10 @@ tasks {
         kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
         kotlinOptions.javaParameters = true
     }
+
+    test {
+        jvmArgs("-agentlib:native-image-agent=config-output-dir=./src/main/resources/META-INF/native-image")
+    }
 }
 
 ktor {

@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
 import io.ktor.http.ContentType
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
@@ -18,16 +19,18 @@ import java.nio.charset.StandardCharsets.UTF_8
  */
 @Serializable
 data class EventPayload(
-    val action: String? = null,
-    val ref: String? = null,
+    val action: String?,
+    val ref: String?,
 ) {
     fun shouldProcess(prj: AppConfig.Project): Boolean =
         (action ?: "push") == (prj.action ?: "push") && ref == prj.ref
 
     companion object {
+        @OptIn(ExperimentalSerializationApi::class)
         private val jsonParser = Json {
             isLenient = true
             ignoreUnknownKeys = true
+            explicitNulls = false
         }
 
         fun authenticateRequest(

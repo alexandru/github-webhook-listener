@@ -1,0 +1,31 @@
+<configuration>
+    <!-- Stops logback's self logging spam -->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+
+    <appender name="STDOUT-COLOR" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>true</withJansi>
+        <encoder>
+            <pattern>[%date{ISO8601}] [%highlight(%level)] [%boldYellow(%marker)] [%thread] %cyan({%mdc}) — %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="STDOUT-NOCOLOR" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%date{ISO8601}] [%level] [%marker] [%thread] {%mdc} — %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="CapturingAppender" class="akka.actor.testkit.typed.internal.CapturingAppender" />
+
+    <root level="${LOGBACK_TEST_ROOT_LEVEL:-WARN}">
+        <appender-ref ref="CapturingAppender"/>
+        <if condition='isDefined("console-color")'>
+            <then>
+                <appender-ref ref="STDOUT-COLOR"/>
+            </then>
+            <else>
+                <appender-ref ref="STDOUT-NOCOLOR"/>
+            </else>
+        </if>
+    </root>
+</configuration>
