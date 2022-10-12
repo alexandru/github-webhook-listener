@@ -1,31 +1,29 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
 name: build
 on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
-
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - uses: haskell/actions/setup@v1
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
         with:
-          ghc-version: '8.10.7' # lts-18.21?
-          enable-stack: true
-          stack-version: 'latest'
+          java-version: '17'
+          distribution: 'adopt'
 
-      - uses: actions/cache@v2
-        name: Cache ~/.stack
-        with:
-          key: ${{ runner.os }}-stack-${{ hashFiles('**/stack.yaml.lock') }}-${{ hashFiles('**/github-webhook-listener.cabal') }}
-          restore-keys: |
-            ${{ runner.os }}-stack-
-          path: |
-            ~/.stack
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
-      - name: Resolve/Update Dependencies
-        run: |
-          stack --no-terminal setup
-
-      - name: Run tests
-        run: |
-          stack --no-terminal test
+      - name: Run Tests
+        run: ./gradlew check

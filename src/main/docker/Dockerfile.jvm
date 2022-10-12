@@ -1,0 +1,34 @@
+# To build:
+#
+#   docker build -f ./src/main/docker/Dockerfile.jvm -t github-webhook-listener-jvm .
+#
+# To run:
+#
+#   docker run -p 8080:8080 github-webhook-listener-jvm
+#
+FROM --platform=linux/amd64 gradle:7-jdk17 AS build
+COPY --chown=gradle:gradle . /home/gradle/src
+RUN ls -alh /home/gradle/src
+WORKDIR /home/gradle/src
+RUN gradle buildFatJar --no-daemon
+
+##################################################
+
+FROM --platform=linux/amd64 alpine:latest
+RUN mkdir -p /opt/app
+RUN mkdir -p /opt/app/config
+RUN adduser -u 1001 -h /opt/app -s /bin/sh -D appuser
+WORKDIR /opt/app
+RUN chown -R appuser /opt/app && chmod -R "g+rwX" /opt/app && chown -R appuser:root /opt/app
+
+RUN apk add --no-cache openjdk17-jre-headless
+# RUN apk add --no-cache git curl jq
+
+COPY --from=build --chown=appuser:root /home/gradle/src/build/libs/github-webhook-listener-fat.jar /opt/app/github-webhook-listener-fat.jar
+COPY --from=build --chown=appuser:root /home/gradle/src/config/application-dummy.yaml /opt/app/config/config.yaml
+COPY --from=build --chown=appuser:root /home/gradle/src/scripts/java-exec /opt/app/java-exec
+
+EXPOSE 8080
+USER appuser
+
+CMD ["/opt/app/java-exec","-jar","/opt/app/github-webhook-listener-fat.jar","/opt/app/config/config.yaml"]

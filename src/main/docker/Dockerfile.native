@@ -1,0 +1,29 @@
+# To build:
+#
+#   docker build -f ./src/main/docker/Dockerfile.native -t github-webhook-listener-native .
+#
+# To run:
+#
+#   docker run -p 8080:8080 github-webhook-listener-native
+#
+FROM --platform=linux/amd64 ghcr.io/graalvm/native-image:22.2.0 AS build
+COPY --chown=root:root . /app/source
+WORKDIR /app/source
+RUN ./gradlew nativeCompile --no-daemon
+
+FROM --platform=linux/amd64 alpine:latest
+RUN mkdir -p /opt/app/config
+RUN adduser -u 1001 -h /opt/app -s /bin/sh -D appuser
+WORKDIR /opt/app
+RUN chown -R appuser /opt/app && chmod -R "g+rwX" /opt/app && chown -R appuser:root /opt/app
+
+RUN apk add --no-cache gcompat
+# RUN apk add --no-cache git curl jq
+
+COPY --from=build --chown=appuser:root /app/source/build/native/nativeCompile/github-webhook-listener /opt/app/github-webhook-listener
+COPY --from=build --chown=appuser:root /app/source/config/application-dummy.yaml /opt/app/config/config.yaml
+
+EXPOSE 8080
+USER appuser
+
+CMD ["/opt/app/github-webhook-listener", "/opt/app/config/config.yaml"]
