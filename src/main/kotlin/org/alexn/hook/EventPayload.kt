@@ -18,11 +18,11 @@ import java.nio.charset.StandardCharsets.UTF_8
  */
 @Serializable
 data class EventPayload(
-    val action: String?,
-    val ref: String?,
+    val action: String? = null,
+    val ref: String? = null,
 ) {
     fun shouldProcess(prj: AppConfig.Project): Boolean =
-        action == (prj.action ?: "push") && ref == prj.ref
+        (action ?: "push") == (prj.action ?: "push") && ref == prj.ref
 
     companion object {
         private val jsonParser = Json {
@@ -84,8 +84,8 @@ data class EventPayload(
                     map[values[0]] = values[1] ?: ""
                 }
                 EventPayload(
-                    action = map.get("action"),
-                    ref = map.get("ref"),
+                    action = map["action"],
+                    ref = map["ref"],
                 ).right()
             } catch (e: AssertionError) {
                 RequestError.BadInput("Invalid form-urlencoded data", null).left()
