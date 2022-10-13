@@ -1,28 +1,43 @@
-# github-webhook-listener
+# GitHub Webhook Listener (ver. 2)
 
-[![Build](https://github.com/alexandru/github-webhook-listener/workflows/build/badge.svg?branch=master)](https://github.com/alexandru/github-webhook-listener/actions?query=branch%3Amaster+workflow%3Abuild) [![Deploy](https://github.com/alexandru/github-webhook-listener/workflows/deploy/badge.svg)](https://github.com/alexandru/github-webhook-listener/actions?query=workflow%3Adeploy)
+[![Build](https://github.com/alexandru/github-webhook-listener/workflows/build/badge.svg?branch=main)](https://github.com/alexandru/github-webhook-listener/actions?query=branch%3Amain+workflow%3Abuild) [![Deploy](https://github.com/alexandru/github-webhook-listener/workflows/deploy/badge.svg)](https://github.com/alexandru/github-webhook-listener/actions?query=workflow%3Adeploy)
 
 A simple web app that can be registered as a
 [GitHub Webhook](https://developer.github.com/webhooks/)
 and trigger shell commands in response to events.
 
 Main use-case is to trigger refreshes of websites hosted on your own
-server via [Travis-CI](https://travis-ci.org/) jobs, but in a secure
-way, without exposing server credentials or SSH keys.
+server via CI jobs (e.g., GitHub Actions), but in a secure way, without 
+exposing server credentials or SSH keys.
 
 The server process is also light in resource usage, not using more
-than 20 MB of RAM on a 64-bit Ubuntu machine, so it can be installed
-on under-powered servers.
+than 10 MB of RAM, so it can be installed on under-powered servers.
+
+> **NOTE**
+> 
+> This used to be a Haskell project, that I switched to Kotlin. The code is still available on the [v1-haskell](https://github.com/alexandru/github-webhook-listener/tree/v1-haskell) branch. 
 
 ## Setup
 
-Images are being pushed on [Docker Hub](https://hub.docker.com/repository/docker/alexelcu/github-webhook-listener) and you can quickly run the process like this:
+Docker images are published via [GitHub's Packages](https://github.com/alexandru/github-webhook-listener/pkgs/container/github-webhook-listener). You can quickly run a process like this:
 
 ```sh
 docker run \
   -p 8080:8080 \
-  -ti alexelcu/github-webhook-listener
+  -ti ghcr.io/alexandru/github-webhook-listener:native-latest
 ```
+
+There are 2 versions of this project being published. The default is a binary compiled to a native executable via [GraalVM's Native Image](https://www.graalvm.org/22.1/reference-manual/native-image/). The other image is a JAR that runs with OpenJDK. You can choose between them via the tag used. To use the OpenJDK version, look for tags prefixed with `jvm-`:
+
+```sh
+docker run \
+  -p 8080:8080 \
+  -ti ghcr.io/alexandru/github-webhook-listener:jvm-latest
+```
+
+### Which version to choose?
+
+The native version (e.g., the `native-latest` tag) uses under 10 MB of RAM, and it's good for underpowered servers. The JVM version (e.g., `jvm-latest`) has at least a 50 MB penalty, so use it only if you bump into problems with the native version. The JVM's execution is optimized with the Shenandoah GC, though, releasing memory back to the OS, it's as optimal as a Java process can be, and if you have the RAM, you might prefer it.
 
 ### Server Configuration
 
@@ -32,10 +47,6 @@ On its own this just starts the server, but doesn't know how to do anything. We'
 http:
   path: "/"
   port: 8080
-
-runtime:
-  workers: 2
-  output: stdout
 
 projects:
   myproject:
@@ -47,32 +58,25 @@ projects:
 
 Notes:
 
-1. `myproject` in `project.myproject` is just a name of a project, it could be anything
-2. `ref` says to only react on pushes to the `gh-pages` branch
-3. `directory` is where the `command` should be executed
-4. `command` is to be executed — note that `git` is already installed in the Docker image, doing `git pull` on a directory being the primary use case
+1. `myproject` in `project.myproject` is just a name of a project, it could be anything;
+2. `ref` says to only react on pushes to the `gh-pages` branch;
+3. `directory` is where the `command` should be executed;
+4. `command` is to be executed — note that `git` is not installed, see below;
 
-It would be better if the `git pull` command would update files using a specified host user and group. And we'll also need an SSH key to install our "deployment key". So on your Linux box:
-
-```
-sudo adduser synchronize
-
-sudo adduser synchronize www-data
-
-sudo chown -R synchornize:www-data /var/www/myproject
-```
-
-And afterwards:
+You can then run the server:
 
 ```sh
 docker run \
   -p 8080:8080 \
   -v "$(pwd)/config.yaml:/opt/app/config/config.yaml" \
-  -u "$(id -u synchronize):$(id -g synchronize)" \
-  -ti alexelcu/github-webhook-listener
+  -v "/var/www:/var/www" \
+  -u "$(id -u www-data):$(id -g www-data)" \
+  -ti ghcr.io/alexandru/github-webhook-listener:latest
 ```
 
-You could also use [docker-compose](https://docs.docker.com/compose/), here's what I have on my own server:
+Note that we are forcing the use of `www-data` as the user. This is because we need permissions for `/var/www` that's on the host operating system. Adjust accordingly. 
+
+You can also use a `docker-compose.yaml`:
 
 ```yaml
 version: '3.3'
@@ -80,17 +84,16 @@ version: '3.3'
 services:
   github-webhook-listener:
     container_name: github-webhook-listener
-    image: 'alexelcu/github-webhook-listener:latest'
+    image: ghcr.io/alexandru/github-webhook-listener:latest
     restart: unless-stopped
     ports:
       - "8080:8080"
-    tty: true
     networks:
       - main
     volumes:
       - /var/www:/var/www
       - /etc/github-webhook-listener/config.yaml:/opt/app/config/config.yaml
-    user: "${SYNC_UID}:${SYNC_GID}"
+    user: "${WWW_UID}:${WWW_GID}"
 
 networks:
   main:
@@ -124,12 +127,42 @@ NOTEs on those fields:
 1. the Payload URL contains a `some-id`, in the described path, that should be configured in your `config.yaml` file to identify your project
 2. the Secret is the passphrase you also configured in `config.yaml` — this is optional, but if the `config.yaml` mentions a passphrase which you're not mentioning in this setup, then requests will fail
 
-### Manual Setup (without Docker)
+## Development
 
-[Wiki instructions for Setup](https://github.com/alexandru/github-webhook-listener/wiki/Setup)
+The project uses [Kotlin](https://kotlinlang.org/) as the programming language, with [Ktor](https://ktor.io/). And the setup is optimized for [GraalVM's Native Image](https://www.graalvm.org/22.2/reference-manual/native-image/).
+
+To run the project in development mode:
+
+```sh
+./gradlew run -Pdevelopment --args="./config/application-dummy.conf"
+```
+
+To run after adding new dependencies:
+
+```sh
+./gradlew refreshVersionsMigrate  --mode=VersionCatalogOnly
+```
+
+To update project dependencies:
+
+```sh
+./gradlew refreshVersions
+```
+
+To build the Docker image for the JVM version from scratch:
+
+```sh 
+make build-jvm
+```
+
+Or the native version:
+
+```sh
+make build-native
+```
 
 ## License
 
 Copyright © 2018-2022 Alexandru Nedelcu, some rights reserved.
 
-Licensed under the 3-Clause BSD License. See [LICENSE](./LICENSE).
+Licensed under the AGPL-3.0 license. See [LICENSE](./LICENSE).

@@ -4,34 +4,75 @@ on:
     types: [released]
 
 jobs:
-  deploy_docker:
-    runs-on: ubuntu-20.04
-
+  deploy_docker_jvm:
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@master
+      - uses: actions/checkout@v3
 
-    - name: Install Docker
-      run: |
-        sudo apt-get remove docker docker-engine docker.io containerd runc
-        sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-        sudo apt-get update
-        sudo apt-get install docker-ce docker-ce-cli containerd.io
+      - name: Install Docker
+        run: |
+          sudo apt-get remove docker docker-engine docker.io containerd runc
+          sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+          sudo apt-get update
+          sudo apt-get install docker-ce docker-ce-cli containerd.io
 
-    - name: Login to Docker
-      run: docker login --username=$DOCKER_USER  --password=$DOCKER_PASS
-      env:
-        DOCKER_USER: ${{ secrets.DOCKER_USER }}
-        DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+      - name: Login to Docker
+        run: docker login ghcr.io --username=alexandru --password="$GH_TOKEN"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build Docker image
-      run: |
-        make build
-      env:
-        GIT_TAG: ${{ github.ref }}
+      - name: Build JVM Docker image
+        run: |
+          make build-jvm
+        env:
+          GIT_TAG: ${{ github.ref }}
 
-    - name: Push Docker image
-      run: |
-        make push
-  
+      - name: Push JVM Docker images
+        run: |
+          make push-jvm
+        env:
+          GIT_TAG: ${{ github.ref }}
+
+  deploy_docker_native:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Docker
+        run: |
+          sudo apt-get remove docker docker-engine docker.io containerd runc
+          sudo apt-get install apt-transport-https ca-certificates curl software-properties-common
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+          sudo apt-get update
+          sudo apt-get install docker-ce docker-ce-cli containerd.io
+
+      - name: Login to Docker
+        run: docker login ghcr.io --username=alexandru --password="$GH_TOKEN"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Native Docker image
+        run: |
+          make build-native
+        env:
+          GIT_TAG: ${{ github.ref }}
+
+      - name: Push Native Docker images
+        run: |
+          make push-native
+        env:
+          GIT_TAG: ${{ github.ref }}
+
+  all:
+    name: Pushed All
+    if: always()
+    needs: [ deploy_docker_native, deploy_docker_jvm ]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Validate required tests
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}

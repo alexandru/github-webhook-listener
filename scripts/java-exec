@@ -1,0 +1,8 @@
+#!/bin/sh
+
+exec java \
+  -XX:+UseShenandoahGC \
+  -XX:+UnlockExperimentalVMOptions \
+  -XX:ShenandoahUncommitDelay=1000 \
+  -XX:ShenandoahGuaranteedGCInterval=10000 \
+  "$@"
