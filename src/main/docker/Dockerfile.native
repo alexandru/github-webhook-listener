@@ -18,7 +18,7 @@ WORKDIR /opt/app
 RUN chown -R appuser /opt/app && chmod -R "g+rwX" /opt/app && chown -R appuser:root /opt/app
 
 RUN apk add --no-cache gcompat
-# RUN apk add --no-cache git curl jq
+RUN apk add --no-cache git curl jq
 
 COPY --from=build --chown=appuser:root /app/source/build/native/nativeCompile/github-webhook-listener /opt/app/github-webhook-listener
 COPY --from=build --chown=appuser:root /app/source/config/application-dummy.yaml /opt/app/config/config.yaml
