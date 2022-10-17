@@ -10,7 +10,7 @@ FROM --platform=linux/amd64 ghcr.io/graalvm/native-image:22.2.0 AS build
 COPY --chown=root:root . /app/source
 WORKDIR /app/source
 RUN ./gradlew run -PnativeAgent --args="run-test-scenario -c ./config/application-dummy.yaml"
-RUN ./gradlew nativeCompile --no-daemon
+RUN ./gradlew nativeCompile
 
 FROM --platform=linux/amd64 alpine:latest
 RUN mkdir -p /opt/app/config
