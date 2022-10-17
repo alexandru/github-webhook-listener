@@ -38,6 +38,9 @@ graalvmNative {
             buildArgs.add("-H:+InstallExitHandlers")
             buildArgs.add("-H:+ReportUnsupportedElementsAtRuntime")
             buildArgs.add("-H:+ReportExceptionStackTraces")
+            buildArgs.add("-R:MinHeapSize=2m")
+            buildArgs.add("-R:MaxHeapSize=30m")
+            buildArgs.add("-R:MaxNewSize=2m")
             buildArgs.add("--no-fallback")
 
             imageName.set("github-webhook-listener")
