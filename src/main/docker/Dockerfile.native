@@ -27,4 +27,4 @@ COPY --from=build --chown=appuser:root /app/source/config/application-dummy.yaml
 EXPOSE 8080
 USER appuser
 
-CMD ["/opt/app/github-webhook-listener", "/opt/app/config/config.yaml"]
+CMD ["/opt/app/github-webhook-listener","start-server","-c","/opt/app/config/config.yaml"]
