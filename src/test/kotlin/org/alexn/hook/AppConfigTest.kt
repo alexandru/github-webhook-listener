@@ -5,9 +5,6 @@ package org.alexn.hook
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.hocon.Hocon
-import kotlinx.serialization.hocon.decodeFromConfig
-import kotlinx.serialization.hocon.encodeToConfig
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,39 +36,7 @@ class AppConfigTest {
     }
 
     @Test
-    fun hoconCodecWorks() {
-        val encoded = Hocon.encodeToConfig(expected)
-        val received = Hocon.decodeFromConfig<AppConfig>(encoded)
-        assertEquals(expected, received)
-    }
-
-    @Test
-    fun parseFromHoconString() {
-        val config = """
-        http {
-            host = "0.0.0.0"
-            port = 8080
-        }
-
-        projects {
-            monix {
-                ref: "refs/heads/gh-pages"
-                directory: "/var/www/myproject"
-                command: "git pull"
-                timeout: "PT3S"
-                secret: "xxxxx"
-            }
-        }
-        """.trimIndent()
-
-        assertEquals(
-            expected,
-            AppConfig.parseHocon(config)
-        )
-    }
-
-    @Test
-    fun parseLegacyYamlConfig() {
+    fun parseYamlConfig() {
         val config = """
         http:
           path: "/"

@@ -83,4 +83,3 @@ ktor {
         archiveFileName.set("github-webhook-listener-fat.jar")
     }
 }
-
