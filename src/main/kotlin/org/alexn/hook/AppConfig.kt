@@ -2,10 +2,7 @@ package org.alexn.hook
 
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import com.typesafe.config.ConfigFactory
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.hocon.Hocon
 import java.io.File
 import kotlin.time.Duration
 
@@ -39,26 +36,15 @@ data class AppConfig(
     )
 
     companion object {
-        @OptIn(ExperimentalSerializationApi::class)
-        fun parseHocon(string: String): AppConfig =
-            Hocon.decodeFromConfig(
-                serializer(),
-                ConfigFactory.parseString(string).resolve()
-            )
-
         fun parseYaml(string: String): AppConfig =
             yamlParser.decodeFromString(
                 serializer(),
                 string
             )
 
-        fun loadFromFile(file: File): AppConfig {
+        fun parseYaml(file: File): AppConfig {
             val txt = file.readText()
-            return if (file.extension.matches("(?i)yaml|yml".toRegex())) {
-                parseYaml(txt)
-            } else {
-                parseHocon(txt)
-            }
+            return parseYaml(txt)
         }
 
         private val yamlParser = Yaml(

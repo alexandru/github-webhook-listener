@@ -173,3 +173,5 @@ ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "
 kotlin-stdlib-jdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8" }
 
 ktor-client-cio-jvm = { group = "io.ktor", name = "ktor-client-cio-jvm", version.ref = "ktor" }
+
+ktor-server-html-builder = { group = "io.ktor", name = "ktor-server-html-builder", version.ref = "ktor" }

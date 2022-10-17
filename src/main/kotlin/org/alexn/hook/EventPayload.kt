@@ -7,7 +7,6 @@ import io.ktor.http.ContentType
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.apache.commons.codec.digest.HmacAlgorithms
 import org.apache.commons.codec.digest.HmacUtils
@@ -20,7 +19,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 @Serializable
 data class EventPayload(
     val action: String?,
-    val ref: String?,
+    val ref: String?
 ) {
     fun shouldProcess(prj: AppConfig.Project): Boolean =
         (action ?: "push") == (prj.action ?: "push") && ref == prj.ref
@@ -36,40 +35,44 @@ data class EventPayload(
         fun authenticateRequest(
             body: String,
             signatureKey: String,
-            signatureHeader: String?,
+            signatureHeader: String?
         ): Either<RequestError.Forbidden, Unit> {
-            if (signatureHeader == null)
+            if (signatureHeader == null) {
                 return RequestError.Forbidden("No signature header was provided").left()
+            }
 
             val sha1Prefix = "sha1="
             val sha256Prefix = "sha256="
 
             if (signatureHeader.startsWith(sha256Prefix)) {
                 val hmacHex = HmacUtils(HmacAlgorithms.HMAC_SHA_256, signatureKey).hmacHex(body)
-                if (!signatureHeader.substring(sha256Prefix.length).equals(hmacHex, ignoreCase = true))
+                if (!signatureHeader.substring(sha256Prefix.length).equals(hmacHex, ignoreCase = true)) {
                     return RequestError.Forbidden("Invalid checksum (sha256)").left()
+                }
                 return Unit.right()
             }
             if (signatureHeader.startsWith(sha1Prefix)) {
                 val hmacHex = HmacUtils(HmacAlgorithms.HMAC_SHA_1, signatureKey).hmacHex(body)
-                if (!signatureHeader.substring(sha1Prefix.length).equals(hmacHex, ignoreCase = true))
+                if (!signatureHeader.substring(sha1Prefix.length).equals(hmacHex, ignoreCase = true)) {
                     return RequestError.Forbidden("Invalid checksum (sha1)").left()
+                }
                 return Unit.right()
             }
             return RequestError.Forbidden("Unsupported algorithm").left()
         }
 
         fun parse(contentType: ContentType, body: String): Either<RequestError, EventPayload> =
-            if (contentType.match(ContentType("application", "json")))
+            if (contentType.match(ContentType("application", "json"))) {
                 parseJson(body)
-            else if (contentType.match(ContentType("application", "x-www-form-urlencoded")))
+            } else if (contentType.match(ContentType("application", "x-www-form-urlencoded"))) {
                 parseFormData(body)
-            else
+            } else {
                 RequestError.UnsupportedMediaType("Cannot process `$contentType` media type").left()
+            }
 
         fun parseJson(json: String): Either<RequestError.BadInput, EventPayload> {
             try {
-                val payload = jsonParser.decodeFromString<EventPayload>(json)
+                val payload = jsonParser.decodeFromString(serializer(), json)
                 return payload.right()
             } catch (e: SerializationException) {
                 return RequestError.BadInput("Invalid JSON", e).left()
@@ -88,7 +91,7 @@ data class EventPayload(
                 }
                 EventPayload(
                     action = map["action"],
-                    ref = map["ref"],
+                    ref = map["ref"]
                 ).right()
             } catch (e: AssertionError) {
                 RequestError.BadInput("Invalid form-urlencoded data", null).left()

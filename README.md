@@ -161,6 +161,10 @@ Or the native version:
 make build-native
 ```
 
+### Issues with native-image
+
+- [Kotlinx Serialization with GraalVM Native Images](https://github.com/Kotlin/kotlinx.serialization/issues/1125)
+
 ## License
 
 Copyright © 2018-2022 Alexandru Nedelcu, some rights reserved.

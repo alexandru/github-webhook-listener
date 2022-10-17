@@ -9,8 +9,7 @@
 FROM --platform=linux/amd64 ghcr.io/graalvm/native-image:22.2.0 AS build
 COPY --chown=root:root . /app/source
 WORKDIR /app/source
-RUN ./gradlew run -PnativeAgent --args="run-test-scenario -c ./config/application-dummy.yaml"
-RUN ./gradlew nativeCompile
+RUN ./gradlew nativeCompile --no-daemon
 
 FROM --platform=linux/amd64 alpine:latest
 RUN mkdir -p /opt/app/config
@@ -27,4 +26,4 @@ COPY --from=build --chown=appuser:root /app/source/config/application-dummy.yaml
 EXPOSE 8080
 USER appuser
 
-CMD ["/opt/app/github-webhook-listener","start-server","-c","/opt/app/config/config.yaml"]
+CMD ["/opt/app/github-webhook-listener","/opt/app/config/config.yaml"]

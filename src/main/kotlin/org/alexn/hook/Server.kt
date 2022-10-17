@@ -4,26 +4,30 @@ import arrow.core.Either
 import arrow.core.continuations.either
 import arrow.core.left
 import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
-import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.html.respondHtml
 import io.ktor.server.request.contentType
 import io.ktor.server.request.header
 import io.ktor.server.request.receiveText
-import io.ktor.server.response.respond
 import io.ktor.server.response.respondRedirect
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.runInterruptible
-import kotlinx.serialization.json.Json
+import kotlinx.html.body
+import kotlinx.html.head
+import kotlinx.html.li
+import kotlinx.html.p
+import kotlinx.html.title
+import kotlinx.html.ul
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets.UTF_8
 
 suspend fun startServer(appConfig: AppConfig) {
     val commandTrigger = CommandTrigger(appConfig.projects)
@@ -49,15 +53,6 @@ fun Application.configureRouting(
     val basePath = config.http.basePath
 
     routing {
-        install(ContentNegotiation) {
-            json(
-                Json {
-                    prettyPrint = true
-                    isLenient = true
-                }
-            )
-        }
-
         if (config.http.basePath.isNotEmpty()) {
             get(config.http.basePath) {
                 call.respondRedirect("$basePath/")
@@ -65,11 +60,19 @@ fun Application.configureRouting(
         }
 
         get("$basePath/") {
-            call.respond(
-                mapOf(
-                    "configured" to config.projects.map { it.key }
-                )
-            )
+            call.respondHtml(HttpStatusCode.OK) {
+                head {
+                    title { +"GitHub Webhook Listener" }
+                }
+                body {
+                    p { +"Configured hooks:" }
+                    ul {
+                        for (p in config.projects) {
+                            li { +URLEncoder.encode(p.key, UTF_8) }
+                        }
+                    }
+                }
+            }
         }
 
         post("$basePath/{project}") {

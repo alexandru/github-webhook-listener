@@ -31,4 +31,4 @@ COPY --from=build --chown=appuser:root /home/gradle/src/scripts/java-exec /opt/a
 EXPOSE 8080
 USER appuser
 
-CMD ["/opt/app/java-exec","-jar","/opt/app/github-webhook-listener-fat.jar","start-server","-c","/opt/app/config/config.yaml"]
+CMD ["/opt/app/java-exec","-jar","/opt/app/github-webhook-listener-fat.jar","/opt/app/config/config.yaml"]

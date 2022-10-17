@@ -50,25 +50,22 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.kotlin.stdlib.jdk8)
-    implementation(libs.logback.classic)
-    implementation(libs.kaml)
-    implementation(libs.commons.codec)
     implementation(libs.arrow.core)
     implementation(libs.arrow.fx.coroutines)
     implementation(libs.arrow.fx.stm)
-    implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.ktor.server.core)
-    // implementation(libs.ktor.server.netty)
-    implementation(libs.ktor.server.cio)
-    implementation(libs.ktor.server.tests.jvm)
-    implementation(libs.ktor.client.cio.jvm)
+    implementation(libs.commons.codec)
     implementation(libs.commons.text)
+    implementation(libs.kaml)
+    implementation(libs.kotlin.stdlib.jdk8)
     implementation(libs.kotlin.test.junit)
     implementation(libs.kotlinx.cli)
-    implementation(libs.kotlinx.serialization.hocon)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.html.builder)
+    implementation(libs.ktor.server.tests.jvm)
+    implementation(libs.logback.classic)
 }
 
 tasks {
@@ -86,3 +83,4 @@ ktor {
         archiveFileName.set("github-webhook-listener-fat.jar")
     }
 }
+
