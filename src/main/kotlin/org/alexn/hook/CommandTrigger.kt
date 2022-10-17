@@ -45,18 +45,19 @@ class CommandTrigger private constructor(
                     dir = File(project.directory)
                 )
             }
-            if (result.isSuccessful)
+            if (result.isSuccessful) {
                 Unit.right()
-            else
+            } else {
                 RequestError.Internal(
                     "Command execution failed",
                     null,
                     meta = mapOf(
                         "exit-code" to result.exitCode.toString(),
                         "stdout" to result.stdout,
-                        "stderr" to result.stderr,
+                        "stderr" to result.stderr
                     )
                 ).left()
+            }
         } catch (e: TimeoutCancellationException) {
             RequestError.TimedOut(
                 "Command execution timed-out after $timeoutDuration"

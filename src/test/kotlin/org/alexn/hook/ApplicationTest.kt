@@ -41,7 +41,7 @@ class ApplicationTest {
         val hmacSha1: String,
         val hmacSha256: String,
         val hmacSha512: String,
-        val createdFile: File,
+        val createdFile: File
     )
 
     private suspend fun ApplicationTestBuilder.withInitializedApp(block: suspend ApplicationTestBuilder.(Helpers) -> Unit) {

@@ -50,7 +50,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation(libs.kotlin.stdlib.jdk8)
     implementation(libs.logback.classic)
     implementation(libs.kaml)
     implementation(libs.commons.codec)
@@ -63,6 +63,7 @@ dependencies {
     // implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.cio)
     implementation(libs.ktor.server.tests.jvm)
+    implementation(libs.ktor.client.cio.jvm)
     implementation(libs.commons.text)
     implementation(libs.kotlin.test.junit)
     implementation(libs.kotlinx.cli)

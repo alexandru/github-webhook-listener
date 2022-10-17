@@ -8,6 +8,8 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
 import io.ktor.server.application.install
+import io.ktor.server.cio.CIO
+import io.ktor.server.engine.embeddedServer
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.contentType
 import io.ktor.server.request.header
@@ -18,9 +20,24 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import kotlinx.coroutines.runInterruptible
 import kotlinx.serialization.json.Json
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+suspend fun startServer(appConfig: AppConfig) {
+    val commandTrigger = CommandTrigger(appConfig.projects)
+    val server = embeddedServer(
+        CIO,
+        port = appConfig.http.port,
+        host = appConfig.http.host ?: "0.0.0.0"
+    ) {
+        configureRouting(appConfig, commandTrigger)
+    }
+    runInterruptible {
+        server.start(wait = true)
+    }
+}
 
 fun Application.configureRouting(
     config: AppConfig,
@@ -41,10 +58,11 @@ fun Application.configureRouting(
             )
         }
 
-        if (config.http.basePath.isNotEmpty())
+        if (config.http.basePath.isNotEmpty()) {
             get(config.http.basePath) {
                 call.respondRedirect("$basePath/")
             }
+        }
 
         get("$basePath/") {
             call.respond(
@@ -76,10 +94,11 @@ fun Application.configureRouting(
                 val parsed =
                     EventPayload.parse(call.request.contentType(), body).bind()
 
-                val result = if (parsed.shouldProcess(project))
+                val result = if (parsed.shouldProcess(project)) {
                     commandTriggerService.triggerCommand(projectKey)
-                else
+                } else {
                     RequestError.Skipped("Nothing to do for project `$projectKey`").left()
+                }
 
                 result.bind()
             }

@@ -12,13 +12,13 @@ import kotlin.time.Duration
 @Serializable
 data class AppConfig(
     val http: Http,
-    val projects: Map<String, Project>,
+    val projects: Map<String, Project>
 ) {
     @Serializable
     data class Http(
         val port: Int,
         val host: String? = null,
-        val path: String? = null,
+        val path: String? = null
     ) {
         val basePath: String
             get() {
@@ -35,7 +35,7 @@ data class AppConfig(
         val command: String,
         val secret: String,
         val action: String? = null,
-        val timeout: Duration? = null,
+        val timeout: Duration? = null
     )
 
     companion object {
@@ -54,10 +54,11 @@ data class AppConfig(
 
         fun loadFromFile(file: File): AppConfig {
             val txt = file.readText()
-            return if (file.extension.matches("(?i)yaml|yml".toRegex()))
+            return if (file.extension.matches("(?i)yaml|yml".toRegex())) {
                 parseYaml(txt)
-            else
+            } else {
                 parseHocon(txt)
+            }
         }
 
         private val yamlParser = Yaml(
