@@ -4,6 +4,9 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+# Native image stuff
+**/src/main/resources/META-INF/native-image
+
 ### STS ###
 .apt_generated
 .classpath

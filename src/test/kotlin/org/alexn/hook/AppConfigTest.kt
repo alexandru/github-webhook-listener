@@ -48,20 +48,20 @@ class AppConfigTest {
     @Test
     fun parseFromHoconString() {
         val config = """
-            http {
-                host = "0.0.0.0"
-                port = 8080
-            }
+        http {
+            host = "0.0.0.0"
+            port = 8080
+        }
 
-            projects {
-                monix {
-                    ref: "refs/heads/gh-pages"
-                    directory: "/var/www/myproject"
-                    command: "git pull"
-                    timeout: "PT3S"
-                    secret: "xxxxx"
-                }
+        projects {
+            monix {
+                ref: "refs/heads/gh-pages"
+                directory: "/var/www/myproject"
+                command: "git pull"
+                timeout: "PT3S"
+                secret: "xxxxx"
             }
+        }
         """.trimIndent()
 
         assertEquals(
@@ -73,20 +73,20 @@ class AppConfigTest {
     @Test
     fun parseLegacyYamlConfig() {
         val config = """
-            http:
-              path: "/"
-              port: 8080
+        http:
+          path: "/"
+          port: 8080
 
-            runtime:
-              workers: 2
-              output: stdout
+        runtime:
+          workers: 2
+          output: stdout
 
-            projects:
-              myproject:
-                ref: "refs/heads/gh-pages"
-                directory: "/var/www/myproject"
-                command: "git pull"
-                secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+        projects:
+          myproject:
+            ref: "refs/heads/gh-pages"
+            directory: "/var/www/myproject"
+            command: "git pull"
+            secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
         """.trimIndent()
 
         assertEquals(

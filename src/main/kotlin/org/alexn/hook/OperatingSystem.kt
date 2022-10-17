@@ -14,7 +14,7 @@ import java.nio.file.Path
 data class CommandResult(
     val exitCode: Int,
     val stdout: String,
-    val stderr: String,
+    val stderr: String
 ) {
     val isSuccessful get() = exitCode == 0
 }

@@ -26,6 +26,10 @@ fun main() = runBlocking {
     """.trimIndent()
 
     val client = HttpClient(CIO)
+    //--------
+    val ping = client.get("http://localhost:8080/")
+    println("HTTP ${ping.status}: ${ping.bodyAsText()}")
+    //--------
     val response1 =
         client.post("http://localhost:8080/myproject") {
             headers {
