@@ -6,9 +6,10 @@
 #
 #   docker run -p 8080:8080 github-webhook-listener-native
 #
-FROM --platform=linux/amd64 ghcr.io/graalvm/native-image:22.2.0 AS build
+FROM --platform=linux/amd64 ghcr.io/graalvm/native-image:latest AS build
 COPY --chown=root:root . /app/source
 WORKDIR /app/source
+RUN microdnf install findutils -y
 RUN ./gradlew nativeCompile --no-daemon
 
 FROM --platform=linux/amd64 alpine:latest

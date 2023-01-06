@@ -32,7 +32,7 @@ graalvmNative {
             fallback.set(false)
             verbose.set(true)
 
-            buildArgs.add("--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback")
+            buildArgs.add("--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback,org.slf4j.impl.StaticLoggerBinder")
             buildArgs.add("--initialize-at-build-time=io.ktor,kotlinx,kotlin")
 
             buildArgs.add("-H:+InstallExitHandlers")
