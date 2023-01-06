@@ -14,14 +14,34 @@ RUN gradle buildFatJar --no-daemon
 
 ##################################################
 
+FROM --platform=linux/amd64 eclipse-temurin:17-alpine as jre-build
+
+# Create a custom Java runtime
+RUN apk add binutils --no-cache
+RUN $JAVA_HOME/bin/jlink \
+        --add-modules java.base \
+        --add-modules java.xml \
+        --add-modules java.naming \
+        --strip-debug \
+        --no-man-pages \
+        --no-header-files \
+        --compress=2 \
+        --output /javaruntime
+
+##################################################
+
 FROM --platform=linux/amd64 alpine:latest
+
+ENV JAVA_HOME=/opt/java
+ENV PATH "${JAVA_HOME}/bin:${PATH}"
+COPY --from=jre-build /javaruntime $JAVA_HOME
+
 RUN mkdir -p /opt/app
 RUN mkdir -p /opt/app/config
 RUN adduser -u 1001 -h /opt/app -s /bin/sh -D appuser
 WORKDIR /opt/app
 RUN chown -R appuser /opt/app && chmod -R "g+rwX" /opt/app && chown -R appuser:root /opt/app
 
-RUN apk add --no-cache openjdk17-jre-headless
 RUN apk add --no-cache git curl jq
 
 COPY --from=build --chown=appuser:root /home/gradle/src/build/libs/github-webhook-listener-fat.jar /opt/app/github-webhook-listener-fat.jar
