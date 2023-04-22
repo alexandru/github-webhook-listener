@@ -1,7 +1,7 @@
 package org.alexn.hook
 
 import arrow.core.Option
-import arrow.core.orElse
+import arrow.core.recover
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runInterruptible
@@ -101,8 +101,8 @@ suspend fun executeRawShellCommand(
 val USER_HOME: File? by lazy {
     Option.fromNullable(System.getProperty("user.home"))
         .filter { it.isNotEmpty() }
-        .orElse { Option.fromNullable(System.getenv("HOME")) }
+        .recover { Option.fromNullable(System.getenv("HOME")).bind() }
         .filter { it.isNotEmpty() }
         .map { File(it) }
-        .orNull()
+        .getOrNull()
 }

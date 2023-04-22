@@ -1,6 +1,6 @@
 package org.alexn.hook
 
-import arrow.core.getOrHandle
+import arrow.core.getOrElse
 import org.apache.commons.codec.digest.HmacAlgorithms
 import org.apache.commons.codec.digest.HmacUtils
 import java.io.FileNotFoundException
@@ -26,9 +26,9 @@ class EventPayloadTest {
             .authenticateRequest(
                 json,
                 key,
-                "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, key).hmacHex(json),
+                "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, key).hmacHex(json)
             )
-            .getOrHandle { throw it.toException() }
+            .getOrElse { throw it.toException() }
     }
 
     @Test
@@ -46,9 +46,9 @@ class EventPayloadTest {
             .authenticateRequest(
                 json,
                 key,
-                "sha256=" + HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(json),
+                "sha256=" + HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(json)
             )
-            .getOrHandle { throw it.toException() }
+            .getOrElse { throw it.toException() }
     }
 
     @Test
@@ -66,7 +66,7 @@ class EventPayloadTest {
             .authenticateRequest(
                 json,
                 key,
-                "sha512=" + HmacUtils(HmacAlgorithms.HMAC_SHA_512, key).hmacHex(json),
+                "sha512=" + HmacUtils(HmacAlgorithms.HMAC_SHA_512, key).hmacHex(json)
             )
         assertTrue(r.isLeft(), "Unexpected result: $r")
     }
@@ -81,7 +81,7 @@ class EventPayloadTest {
         }
         """.trimIndent()
 
-        val received = EventPayload.parseJson(json).getOrHandle { throw it.toException() }
+        val received = EventPayload.parseJson(json).getOrElse { throw it.toException() }
         assertEquals(
             EventPayload(
                 action = "some-action",
@@ -96,7 +96,7 @@ class EventPayloadTest {
         val formData =
             "action=${URLEncoder.encode("some action", UTF_8)}&" +
                 "ref=${URLEncoder.encode("some ref", UTF_8)}"
-        val received = EventPayload.parseFormData(formData).getOrHandle { throw it.toException() }
+        val received = EventPayload.parseFormData(formData).getOrElse { throw it.toException() }
         assertEquals(
             EventPayload(
                 action = "some action",
@@ -127,13 +127,13 @@ class EventPayloadTest {
 
         val parsed = EventPayload
             .parseJson(json)
-            .getOrHandle { throw it.toException() }
+            .getOrElse { throw it.toException() }
 
         assertEquals(
             parsed,
             EventPayload(
                 action = null,
-                ref = "refs/heads/gh-pages",
+                ref = "refs/heads/gh-pages"
             )
         )
     }
