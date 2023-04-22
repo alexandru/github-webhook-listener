@@ -1,8 +1,9 @@
 package org.alexn.hook
 
 import arrow.core.Either
-import arrow.core.continuations.either
 import arrow.core.left
+import arrow.core.raise.either
+import arrow.core.raise.ensureNotNull
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
@@ -83,10 +84,10 @@ fun Application.configureRouting(
             }
 
             val response = either {
-                val project = Either
-                    .fromNullable(config.projects[projectKey])
-                    .mapLeft { RequestError.NotFound("Project `$projectKey` does not exist") }
-                    .bind()
+                val project = config.projects[projectKey]
+                ensureNotNull(project) {
+                    RequestError.NotFound("Project `$projectKey` does not exist")
+                }
 
                 val signature = call.request.header("X-Hub-Signature-256") ?: call.request.header("X-Hub-Signature")
                 val body = call.receiveText()
