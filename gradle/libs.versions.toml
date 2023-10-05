@@ -2,21 +2,19 @@
 
 [plugins]
 
-org-jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "1.8.0" }
+org-jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 
-io-ktor-plugin = { id = "io.ktor.plugin", version = "2.2.2" }
+io-ktor-plugin = { id = "io.ktor.plugin", version = "2.3.4" }
 
-org-jetbrains-kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version = "1.8.0" }
+org-jetbrains-kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
-org-jlleitschuh-gradle-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "11.0.0" }
+org-jlleitschuh-gradle-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "11.6.0" }
 
-org-graalvm-buildtools-native = { id = "org.graalvm.buildtools.native", version = "0.9.19" }
+org-graalvm-buildtools-native = { id = "org.graalvm.buildtools.native", version = "0.9.27" }
 
 [versions]
 
 kotlin = "1.9.10"
-##  ⬆ = "1.9.20-Beta"
-##  ⬆ = "1.9.20-Beta2"
 
 arrow = "1.2.1"
 
@@ -28,7 +26,7 @@ kotlinx-serialization = "1.6.0"
 
 [libraries]
 
-logback-classic = "ch.qos.logback:logback-classic:1.4.11"
+logback-classic = "ch.qos.logback:logback-classic:1.2.12"
 
 kaml = "com.charleskorn.kaml:kaml:0.55.0"
 
@@ -77,3 +75,9 @@ ktor-client-cio-jvm = { group = "io.ktor", name = "ktor-client-cio-jvm", version
 ktor-server-html-builder = { group = "io.ktor", name = "ktor-server-html-builder", version.ref = "ktor" }
 
 ktor-bom = { group = "io.ktor", name = "ktor-bom", version.ref = "ktor" }
+
+kotlin-serialization-compiler-plugin-embeddable = { group = "org.jetbrains.kotlin", name = "kotlin-serialization-compiler-plugin-embeddable", version.ref = "kotlin" }
+
+ktlint-reporter-baseline = "com.pinterest.ktlint:ktlint-reporter-baseline:0.50.0"
+
+ktlint-ruleset-standard = "com.pinterest.ktlint:ktlint-ruleset-standard:1.0.0"
