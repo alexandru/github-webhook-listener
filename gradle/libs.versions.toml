@@ -14,23 +14,25 @@ org-graalvm-buildtools-native = { id = "org.graalvm.buildtools.native", version 
 
 [versions]
 
-kotlin = "1.8.20"
+kotlin = "1.9.10"
+##  ⬆ = "1.9.20-Beta"
+##  ⬆ = "1.9.20-Beta2"
 
-arrow = "1.2.0-RC"
+arrow = "1.2.1"
 
-ktor = "2.3.0"
+ktor = "2.3.4"
 
-kotlinx-cli = "0.3.5"
+kotlinx-cli = "0.3.6"
 
-kotlinx-serialization = "1.5.0"
+kotlinx-serialization = "1.6.0"
 
 [libraries]
 
-logback-classic = "ch.qos.logback:logback-classic:1.4.7"
+logback-classic = "ch.qos.logback:logback-classic:1.4.11"
 
-kaml = "com.charleskorn.kaml:kaml:0.53.0"
+kaml = "com.charleskorn.kaml:kaml:0.55.0"
 
-commons-codec = "commons-codec:commons-codec:1.15"
+commons-codec = "commons-codec:commons-codec:1.16.0"
 
 arrow-core = { group = "io.arrow-kt", name = "arrow-core", version.ref = "arrow" }
 
