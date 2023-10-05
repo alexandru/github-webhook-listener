@@ -14,6 +14,9 @@ push-jvm:
 	docker push ${IMG_JVM}
 	docker push ${LATEST_JVM}
 
+run-jvm:
+	docker run -p 8080:8080 -ti ${LATEST_JVM}
+
 build-native:
 	docker build -f ./src/main/docker/Dockerfile.native -t "${IMG_NATIVE}" .
 	docker tag "${IMG_NATIVE}" "${LATEST_NATIVE}"
@@ -23,4 +26,7 @@ push-native:
 	docker push ${IMG_NATIVE}
 	docker push ${LATEST_NATIVE}
 	docker push ${LATEST}
+
+run-native:
+	docker run -p 8080:8080 -ti ${LATEST_NATIVE}
 
