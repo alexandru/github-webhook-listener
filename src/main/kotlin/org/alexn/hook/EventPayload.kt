@@ -19,23 +19,23 @@ import java.nio.charset.StandardCharsets.UTF_8
 @Serializable
 data class EventPayload(
     val action: String?,
-    val ref: String?
+    val ref: String?,
 ) {
-    fun shouldProcess(prj: AppConfig.Project): Boolean =
-        (action ?: "push") == (prj.action ?: "push") && ref == prj.ref
+    fun shouldProcess(prj: AppConfig.Project): Boolean = (action ?: "push") == (prj.action ?: "push") && ref == prj.ref
 
     companion object {
         @OptIn(ExperimentalSerializationApi::class)
-        private val jsonParser = Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-            explicitNulls = false
-        }
+        private val jsonParser =
+            Json {
+                isLenient = true
+                ignoreUnknownKeys = true
+                explicitNulls = false
+            }
 
         fun authenticateRequest(
             body: String,
             signatureKey: String,
-            signatureHeader: String?
+            signatureHeader: String?,
         ): Either<RequestError.Forbidden, Unit> {
             if (signatureHeader == null) {
                 return RequestError.Forbidden("No signature header was provided").left()
@@ -61,7 +61,10 @@ data class EventPayload(
             return RequestError.Forbidden("Unsupported algorithm").left()
         }
 
-        fun parse(contentType: ContentType, body: String): Either<RequestError, EventPayload> =
+        fun parse(
+            contentType: ContentType,
+            body: String,
+        ): Either<RequestError, EventPayload> =
             if (contentType.match(ContentType("application", "json"))) {
                 parseJson(body)
             } else if (contentType.match(ContentType("application", "x-www-form-urlencoded"))) {
@@ -91,7 +94,7 @@ data class EventPayload(
                 }
                 EventPayload(
                     action = map["action"],
-                    ref = map["ref"]
+                    ref = map["ref"],
                 ).right()
             } catch (e: AssertionError) {
                 RequestError.BadInput("Invalid form-urlencoded data", null).left()
@@ -122,16 +125,33 @@ sealed class RequestError(val httpCode: Int) {
                 RequestException("$httpCode Unsupported Media Type — $message", null)
         }
 
-    data class BadInput(override val message: String, val exception: Exception? = null) : RequestError(400)
-    data class Forbidden(override val message: String) : RequestError(403)
-    data class Internal(override val message: String, val exception: Exception? = null, val meta: Map<String, String>? = null) : RequestError(500)
+    data class BadInput(
+        override val message: String,
+        val exception: Exception? = null,
+    ) : RequestError(400)
+
+    data class Forbidden(
+        override val message: String,
+    ) : RequestError(403)
+
+    data class Internal(
+        override val message: String,
+        val exception: Exception? = null,
+        val meta: Map<String, String>? = null,
+    ) : RequestError(
+            500,
+        )
+
     data class NotFound(override val message: String) : RequestError(404)
+
     data class Skipped(override val message: String) : RequestError(200)
+
     data class TimedOut(override val message: String) : RequestError(408)
+
     data class UnsupportedMediaType(override val message: String) : RequestError(415)
 }
 
 class RequestException(
     message: String,
-    cause: Throwable?
+    cause: Throwable?,
 ) : java.lang.Exception(message, cause)

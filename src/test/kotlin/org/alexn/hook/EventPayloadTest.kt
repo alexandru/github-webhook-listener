@@ -14,19 +14,20 @@ class EventPayloadTest {
     @Test
     fun `authenticate message with hmac-sha1`() {
         val key = "some-key"
-        val json = """
-        {
-            "action": "some-action",
-            "ref": "some-ref",
-            "additional": { "field": true }
-        }
-        """.trimIndent()
+        val json =
+            """
+            {
+                "action": "some-action",
+                "ref": "some-ref",
+                "additional": { "field": true }
+            }
+            """.trimIndent()
 
         EventPayload
             .authenticateRequest(
                 json,
                 key,
-                "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, key).hmacHex(json)
+                "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, key).hmacHex(json),
             )
             .getOrElse { throw it.toException() }
     }
@@ -34,19 +35,20 @@ class EventPayloadTest {
     @Test
     fun `authenticate message with hmac-sha256`() {
         val key = "some-key"
-        val json = """
-        {
-            "action": "some-action",
-            "ref": "some-ref",
-            "additional": { "field": true }
-        }
-        """.trimIndent()
+        val json =
+            """
+            {
+                "action": "some-action",
+                "ref": "some-ref",
+                "additional": { "field": true }
+            }
+            """.trimIndent()
 
         EventPayload
             .authenticateRequest(
                 json,
                 key,
-                "sha256=" + HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(json)
+                "sha256=" + HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(json),
             )
             .getOrElse { throw it.toException() }
     }
@@ -54,40 +56,43 @@ class EventPayloadTest {
     @Test
     fun `authenticate fails on unknown algorithm`() {
         val key = "some-key"
-        val json = """
-        {
-            "action": "some-action",
-            "ref": "some-ref",
-            "additional": { "field": true }
-        }
-        """.trimIndent()
+        val json =
+            """
+            {
+                "action": "some-action",
+                "ref": "some-ref",
+                "additional": { "field": true }
+            }
+            """.trimIndent()
 
-        val r = EventPayload
-            .authenticateRequest(
-                json,
-                key,
-                "sha512=" + HmacUtils(HmacAlgorithms.HMAC_SHA_512, key).hmacHex(json)
-            )
+        val r =
+            EventPayload
+                .authenticateRequest(
+                    json,
+                    key,
+                    "sha512=" + HmacUtils(HmacAlgorithms.HMAC_SHA_512, key).hmacHex(json),
+                )
         assertTrue(r.isLeft(), "Unexpected result: $r")
     }
 
     @Test
     fun `parse JSON`() {
-        val json = """
-        {
-            "action": "some-action",
-            "ref": "some-ref",
-            "additional": { "field": true }
-        }
-        """.trimIndent()
+        val json =
+            """
+            {
+                "action": "some-action",
+                "ref": "some-ref",
+                "additional": { "field": true }
+            }
+            """.trimIndent()
 
         val received = EventPayload.parseJson(json).getOrElse { throw it.toException() }
         assertEquals(
             EventPayload(
                 action = "some-action",
-                ref = "some-ref"
+                ref = "some-ref",
             ),
-            received
+            received,
         )
     }
 
@@ -100,20 +105,21 @@ class EventPayloadTest {
         assertEquals(
             EventPayload(
                 action = "some action",
-                ref = "some ref"
+                ref = "some ref",
             ),
-            received
+            received,
         )
     }
 
     @Test
     fun `parse fails on invalid JSON`() {
-        val yaml = """
-        action: some-action
-        ref: some-ref
-        additional:
-            field: true
-        """.trimIndent()
+        val yaml =
+            """
+            action: some-action
+            ref: some-ref
+            additional:
+                field: true
+            """.trimIndent()
 
         val r = EventPayload.parseJson(yaml)
         assertTrue(r.isLeft(), "Unexpected result: $r")
@@ -125,16 +131,17 @@ class EventPayloadTest {
             javaClass.getResourceAsStream("/real-payload.json")?.readAllBytes()?.toString(UTF_8)
                 ?: throw FileNotFoundException("/resources/real-payload.json")
 
-        val parsed = EventPayload
-            .parseJson(json)
-            .getOrElse { throw it.toException() }
+        val parsed =
+            EventPayload
+                .parseJson(json)
+                .getOrElse { throw it.toException() }
 
         assertEquals(
             parsed,
             EventPayload(
                 action = null,
-                ref = "refs/heads/gh-pages"
-            )
+                ref = "refs/heads/gh-pages",
+            ),
         )
     }
 }

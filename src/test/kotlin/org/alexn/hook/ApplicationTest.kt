@@ -21,19 +21,22 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ApplicationTest {
-    private fun appConfig(directory: File) = AppConfig(
-        http = AppConfig.Http(port = 9374),
-        projects = mapOf(
-            "monix" to AppConfig.Project(
-                ref = "refs/heads/gh-pages",
-                directory = directory.absolutePath.toString(),
-                command = "touch ./i-was-here.txt",
-                secret = "kdJlfnKd0Llkjddl",
-                action = null,
-                timeout = null
-            )
+    private fun appConfig(directory: File) =
+        AppConfig(
+            http = AppConfig.Http(port = 9374),
+            projects =
+                mapOf(
+                    "monix" to
+                        AppConfig.Project(
+                            ref = "refs/heads/gh-pages",
+                            directory = directory.absolutePath.toString(),
+                            command = "touch ./i-was-here.txt",
+                            secret = "kdJlfnKd0Llkjddl",
+                            action = null,
+                            timeout = null,
+                        ),
+                ),
         )
-    )
 
     data class Helpers(
         val project: AppConfig.Project,
@@ -41,13 +44,14 @@ class ApplicationTest {
         val hmacSha1: String,
         val hmacSha256: String,
         val hmacSha512: String,
-        val createdFile: File
+        val createdFile: File,
     )
 
     private suspend fun ApplicationTestBuilder.withInitializedApp(block: suspend ApplicationTestBuilder.(Helpers) -> Unit) {
-        val tmpDir = withContext(Dispatchers.IO) {
-            Files.createTempDirectory("test").toFile()
-        }
+        val tmpDir =
+            withContext(Dispatchers.IO) {
+                Files.createTempDirectory("test").toFile()
+            }
         try {
             val cfg = appConfig(tmpDir)
             val project = cfg.projects["monix"] ?: throw IllegalArgumentException("Missing project key in config (monix)")
@@ -55,10 +59,11 @@ class ApplicationTest {
             application {
                 configureRouting(cfg, cmdTrigger)
             }
-            val json = withContext(Dispatchers.IO) {
-                javaClass.getResourceAsStream("/real-payload.json")?.readAllBytes()?.toString(StandardCharsets.UTF_8)
-                    ?: throw FileNotFoundException("/resources/real-payload.json")
-            }
+            val json =
+                withContext(Dispatchers.IO) {
+                    javaClass.getResourceAsStream("/real-payload.json")?.readAllBytes()?.toString(StandardCharsets.UTF_8)
+                        ?: throw FileNotFoundException("/resources/real-payload.json")
+                }
             block(
                 Helpers(
                     project = project,
@@ -66,8 +71,8 @@ class ApplicationTest {
                     hmacSha512 = "sha512=" + HmacUtils(HmacAlgorithms.HMAC_SHA_512, project.secret).hmacHex(json),
                     hmacSha256 = "sha256=" + HmacUtils(HmacAlgorithms.HMAC_SHA_256, project.secret).hmacHex(json),
                     hmacSha1 = "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, project.secret).hmacHex(json),
-                    createdFile = File(tmpDir, "i-was-here.txt")
-                )
+                    createdFile = File(tmpDir, "i-was-here.txt"),
+                ),
             )
         } finally {
             tmpDir.deleteRecursively()
@@ -75,89 +80,95 @@ class ApplicationTest {
     }
 
     @Test
-    fun `root ping`() = testApplication {
-        withInitializedApp {
-            client.get("/").apply {
-                assertEquals(HttpStatusCode.OK, status)
-            }
-        }
-    }
-
-    @Test
-    fun `trigger with sha256 authentication`() = testApplication {
-        withInitializedApp { sample ->
-            client.post("/monix") {
-                contentType(ContentType.Application.Json)
-                headers {
-                    append("X-Hub-Signature-256", sample.hmacSha256)
+    fun `root ping`() =
+        testApplication {
+            withInitializedApp {
+                client.get("/").apply {
+                    assertEquals(HttpStatusCode.OK, status)
                 }
-                setBody(sample.json)
-            }.apply {
-                assertEquals(HttpStatusCode.OK, status)
-            }
-            assert(sample.createdFile.exists()) {
-                "File should exist: `${sample.createdFile.absolutePath}`"
             }
         }
-    }
 
     @Test
-    fun `trigger with sha1 authentication`() = testApplication {
-        withInitializedApp { sample ->
-            client.post("/monix") {
-                contentType(ContentType.Application.Json)
-                headers {
-                    append("X-Hub-Signature", sample.hmacSha1)
+    fun `trigger with sha256 authentication`() =
+        testApplication {
+            withInitializedApp { sample ->
+                client.post("/monix") {
+                    contentType(ContentType.Application.Json)
+                    headers {
+                        append("X-Hub-Signature-256", sample.hmacSha256)
+                    }
+                    setBody(sample.json)
+                }.apply {
+                    assertEquals(HttpStatusCode.OK, status)
                 }
-                setBody(sample.json)
-            }.apply {
-                assertEquals(HttpStatusCode.OK, status)
-            }
-            assert(sample.createdFile.exists()) {
-                "File should exist: `${sample.createdFile.absolutePath}`"
-            }
-        }
-    }
-
-    @Test
-    fun `reject unauthenticated payload`() = testApplication {
-        withInitializedApp { sample ->
-            client.post("/monix") {
-                contentType(ContentType.Application.Json)
-                setBody(sample.json)
-            }.apply {
-                assertEquals(HttpStatusCode.Forbidden, status)
-            }
-        }
-    }
-
-    @Test
-    fun `reject unsupported algorithm`() = testApplication {
-        withInitializedApp { sample ->
-            client.post("/monix") {
-                contentType(ContentType.Application.Json)
-                headers {
-                    append("X-Hub-Signature", sample.hmacSha512)
+                assert(sample.createdFile.exists()) {
+                    "File should exist: `${sample.createdFile.absolutePath}`"
                 }
-                setBody(sample.json)
-            }.apply {
-                assertEquals(HttpStatusCode.Forbidden, status)
             }
         }
-    }
 
     @Test
-    fun `project must exist`() = testApplication {
-        withInitializedApp { sample ->
-            client.post("/notavailable") {
-                contentType(ContentType.Application.Json)
-                headers {
-                    append("X-Hub-Signature", sample.hmacSha1)
+    fun `trigger with sha1 authentication`() =
+        testApplication {
+            withInitializedApp { sample ->
+                client.post("/monix") {
+                    contentType(ContentType.Application.Json)
+                    headers {
+                        append("X-Hub-Signature", sample.hmacSha1)
+                    }
+                    setBody(sample.json)
+                }.apply {
+                    assertEquals(HttpStatusCode.OK, status)
                 }
-                setBody(sample.json)
-            }.apply {
-                assertEquals(HttpStatusCode.NotFound, status)
+                assert(sample.createdFile.exists()) {
+                    "File should exist: `${sample.createdFile.absolutePath}`"
+                }
             }
         }
-    }
+
+    @Test
+    fun `reject unauthenticated payload`() =
+        testApplication {
+            withInitializedApp { sample ->
+                client.post("/monix") {
+                    contentType(ContentType.Application.Json)
+                    setBody(sample.json)
+                }.apply {
+                    assertEquals(HttpStatusCode.Forbidden, status)
+                }
+            }
+        }
+
+    @Test
+    fun `reject unsupported algorithm`() =
+        testApplication {
+            withInitializedApp { sample ->
+                client.post("/monix") {
+                    contentType(ContentType.Application.Json)
+                    headers {
+                        append("X-Hub-Signature", sample.hmacSha512)
+                    }
+                    setBody(sample.json)
+                }.apply {
+                    assertEquals(HttpStatusCode.Forbidden, status)
+                }
+            }
+        }
+
+    @Test
+    fun `project must exist`() =
+        testApplication {
+            withInitializedApp { sample ->
+                client.post("/notavailable") {
+                    contentType(ContentType.Application.Json)
+                    headers {
+                        append("X-Hub-Signature", sample.hmacSha1)
+                    }
+                    setBody(sample.json)
+                }.apply {
+                    assertEquals(HttpStatusCode.NotFound, status)
+                }
+            }
+        }
 }

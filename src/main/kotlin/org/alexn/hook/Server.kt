@@ -32,13 +32,14 @@ import java.nio.charset.StandardCharsets.UTF_8
 
 suspend fun startServer(appConfig: AppConfig) {
     val commandTrigger = CommandTrigger(appConfig.projects)
-    val server = embeddedServer(
-        CIO,
-        port = appConfig.http.port,
-        host = appConfig.http.host ?: "0.0.0.0"
-    ) {
-        configureRouting(appConfig, commandTrigger)
-    }
+    val server =
+        embeddedServer(
+            CIO,
+            port = appConfig.http.port,
+            host = appConfig.http.host ?: "0.0.0.0",
+        ) {
+            configureRouting(appConfig, commandTrigger)
+        }
     runInterruptible {
         server.start(wait = true)
     }
@@ -46,7 +47,7 @@ suspend fun startServer(appConfig: AppConfig) {
 
 fun Application.configureRouting(
     config: AppConfig,
-    commandTriggerService: CommandTrigger
+    commandTriggerService: CommandTrigger,
 ) {
     val logger: Logger by lazy {
         LoggerFactory.getLogger("org.alexn.hook.Routing")
@@ -83,29 +84,31 @@ fun Application.configureRouting(
                 return@post
             }
 
-            val response = either {
-                val project = config.projects[projectKey]
-                ensureNotNull(project) {
-                    RequestError.NotFound("Project `$projectKey` does not exist")
+            val response =
+                either {
+                    val project = config.projects[projectKey]
+                    ensureNotNull(project) {
+                        RequestError.NotFound("Project `$projectKey` does not exist")
+                    }
+
+                    val signature = call.request.header("X-Hub-Signature-256") ?: call.request.header("X-Hub-Signature")
+                    val body = call.receiveText()
+                    EventPayload
+                        .authenticateRequest(body, project.secret, signature)
+                        .bind()
+
+                    val parsed =
+                        EventPayload.parse(call.request.contentType(), body).bind()
+
+                    val result =
+                        if (parsed.shouldProcess(project)) {
+                            commandTriggerService.triggerCommand(projectKey)
+                        } else {
+                            RequestError.Skipped("Nothing to do for project `$projectKey`").left()
+                        }
+
+                    result.bind()
                 }
-
-                val signature = call.request.header("X-Hub-Signature-256") ?: call.request.header("X-Hub-Signature")
-                val body = call.receiveText()
-                EventPayload
-                    .authenticateRequest(body, project.secret, signature)
-                    .bind()
-
-                val parsed =
-                    EventPayload.parse(call.request.contentType(), body).bind()
-
-                val result = if (parsed.shouldProcess(project)) {
-                    commandTriggerService.triggerCommand(projectKey)
-                } else {
-                    RequestError.Skipped("Nothing to do for project `$projectKey`").left()
-                }
-
-                result.bind()
-            }
 
             when (response) {
                 is Either.Right -> {

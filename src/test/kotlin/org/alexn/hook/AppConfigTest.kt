@@ -11,22 +11,26 @@ import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
 class AppConfigTest {
-    val expected = AppConfig(
-        http = AppConfig.Http(
-            host = "0.0.0.0",
-            port = 8080
-        ),
-        projects = mapOf(
-            "monix" to AppConfig.Project(
-                action = null,
-                ref = "refs/heads/gh-pages",
-                directory = "/var/www/myproject",
-                command = "git pull",
-                timeout = 3.seconds,
-                secret = "xxxxx"
-            )
+    val expected =
+        AppConfig(
+            http =
+                AppConfig.Http(
+                    host = "0.0.0.0",
+                    port = 8080,
+                ),
+            projects =
+                mapOf(
+                    "monix" to
+                        AppConfig.Project(
+                            action = null,
+                            ref = "refs/heads/gh-pages",
+                            directory = "/var/www/myproject",
+                            command = "git pull",
+                            timeout = 3.seconds,
+                            secret = "xxxxx",
+                        ),
+                ),
         )
-    )
 
     @Test
     fun jsonCodecWorks() {
@@ -37,42 +41,46 @@ class AppConfigTest {
 
     @Test
     fun parseYamlConfig() {
-        val config = """
-        http:
-          path: "/"
-          port: 8080
+        val config =
+            """
+            http:
+              path: "/"
+              port: 8080
 
-        runtime:
-          workers: 2
-          output: stdout
+            runtime:
+              workers: 2
+              output: stdout
 
-        projects:
-          myproject:
-            ref: "refs/heads/gh-pages"
-            directory: "/var/www/myproject"
-            command: "git pull"
-            secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
-        """.trimIndent()
+            projects:
+              myproject:
+                ref: "refs/heads/gh-pages"
+                directory: "/var/www/myproject"
+                command: "git pull"
+                secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+            """.trimIndent()
 
         assertEquals(
             AppConfig(
-                http = AppConfig.Http(
-                    host = null,
-                    port = 8080,
-                    path = "/"
-                ),
-                projects = mapOf(
-                    "myproject" to AppConfig.Project(
-                        action = null,
-                        ref = "refs/heads/gh-pages",
-                        directory = "/var/www/myproject",
-                        command = "git pull",
-                        timeout = null,
-                        secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
-                    )
-                )
+                http =
+                    AppConfig.Http(
+                        host = null,
+                        port = 8080,
+                        path = "/",
+                    ),
+                projects =
+                    mapOf(
+                        "myproject" to
+                            AppConfig.Project(
+                                action = null,
+                                ref = "refs/heads/gh-pages",
+                                directory = "/var/www/myproject",
+                                command = "git pull",
+                                timeout = null,
+                                secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+                            ),
+                    ),
             ),
-            AppConfig.parseYaml(config)
+            AppConfig.parseYaml(config),
         )
     }
 }

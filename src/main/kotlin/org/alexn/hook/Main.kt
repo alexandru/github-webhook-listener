@@ -10,7 +10,7 @@ fun main(args: Array<String>) {
     val configPath by parser.argument(
         ArgType.String,
         fullName = "config-path",
-        description = "Path to the application configuration"
+        description = "Path to the application configuration",
     )
 
     parser.parse(args)
