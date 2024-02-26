@@ -15,7 +15,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 class CommandTrigger private constructor(
     private val projects: Map<String, AppConfig.Project>,
-    private val locks: Atomic<Map<String, Mutex>>
+    private val locks: Atomic<Map<String, Mutex>>,
 ) {
     private suspend fun lockFor(key: String): Mutex {
         val lockRef = locks.get()[key]
@@ -32,35 +32,38 @@ class CommandTrigger private constructor(
     }
 
     suspend fun triggerCommand(key: String): Either<RequestError, Unit> {
-        val project = projects[key]
-            ?: return RequestError.NotFound("Project `$key` does not exist").left()
+        val project =
+            projects[key]
+                ?: return RequestError.NotFound("Project `$key` does not exist").left()
 
         val timeoutDuration = project.timeout ?: 30.seconds
         val mutex = lockFor(key)
         mutex.lock()
         return try {
-            val result = withTimeout(timeoutDuration) {
-                executeRawShellCommand(
-                    command = project.command,
-                    dir = File(project.directory)
-                )
-            }
+            val result =
+                withTimeout(timeoutDuration) {
+                    executeRawShellCommand(
+                        command = project.command,
+                        dir = File(project.directory),
+                    )
+                }
             if (result.isSuccessful) {
                 Unit.right()
             } else {
                 RequestError.Internal(
                     "Command execution failed",
                     null,
-                    meta = mapOf(
-                        "exit-code" to result.exitCode.toString(),
-                        "stdout" to result.stdout,
-                        "stderr" to result.stderr
-                    )
+                    meta =
+                        mapOf(
+                            "exit-code" to result.exitCode.toString(),
+                            "stdout" to result.stdout,
+                            "stderr" to result.stderr,
+                        ),
                 ).left()
             }
         } catch (e: TimeoutCancellationException) {
             RequestError.TimedOut(
-                "Command execution timed-out after $timeoutDuration"
+                "Command execution timed-out after $timeoutDuration",
             ).left()
         } finally {
             mutex.unlock()
@@ -74,7 +77,7 @@ class CommandTrigger private constructor(
         suspend operator fun invoke(projects: Map<String, AppConfig.Project>): CommandTrigger =
             CommandTrigger(
                 projects,
-                Atomic(mapOf())
+                Atomic(mapOf()),
             )
     }
 }
