@@ -6,7 +6,7 @@
 #
 #   docker run -p 8080:8080 github-webhook-listener-jvm
 #
-FROM --platform=linux/amd64 gradle:8-jdk21 AS build
+FROM gradle:8-jdk21 AS build
 COPY --chown=gradle:gradle . /home/gradle/src
 RUN ls -alh /home/gradle/src
 WORKDIR /home/gradle/src
@@ -14,7 +14,7 @@ RUN gradle buildFatJar --no-daemon
 
 ##################################################
 
-FROM --platform=linux/amd64 eclipse-temurin:21-alpine as jre-build
+FROM eclipse-temurin:21-alpine as jre-build
 
 # Create a custom Java runtime
 RUN apk add binutils --no-cache
@@ -30,7 +30,7 @@ RUN $JAVA_HOME/bin/jlink \
 
 ##################################################
 
-FROM --platform=linux/amd64 alpine:latest
+FROM alpine:latest
 
 ENV JAVA_HOME=/opt/java
 ENV PATH "${JAVA_HOME}/bin:${PATH}"
