@@ -20,7 +20,7 @@ run-jvm:
 	docker run -p 8080:8080 -ti ${LATEST_JVM}
 
 build-native: init-docker
-	docker buildx build --platform linux/amd64,linux/arm64 -f ./src/main/docker/Dockerfile.native -t "${IMG_NATIVE}" -t "${LATEST_NATIVE}" ${DOCKER_EXTRA_ARGS} .
+	docker buildx build --platform linux/amd64,linux/arm64 -f ./src/main/docker/Dockerfile.native -t "${IMG_NATIVE}" -t "${LATEST_NATIVE}" -t "${LATEST}" ${DOCKER_EXTRA_ARGS} .
 
 push-native:
 	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-native
