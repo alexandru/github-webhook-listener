@@ -11,25 +11,19 @@ init-docker:
 	docker buildx use mybuilder
 
 build-jvm: init-docker
-	docker buildx build --platform linux/amd64,linux/arm64 -f ./src/main/docker/Dockerfile.jvm -t "${IMG_JVM}" .
-	docker tag "${IMG_JVM}" "${LATEST_JVM}"
+	docker buildx build --platform linux/amd64,linux/arm64 -f ./src/main/docker/Dockerfile.jvm -t "${IMG_JVM}" -t "${LATEST_JVM}" ${DOCKER_EXTRA_ARGS} .
 
 push-jvm:
-	docker push ${IMG_JVM}
-	docker push ${LATEST_JVM}
+	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-jvm
 
 run-jvm:
 	docker run -p 8080:8080 -ti ${LATEST_JVM}
 
 build-native: init-docker
-	docker buildx build --platform linux/amd64,linux/arm64 -f ./src/main/docker/Dockerfile.native -t "${IMG_NATIVE}" .
-	docker tag "${IMG_NATIVE}" "${LATEST_NATIVE}"
-	docker tag "${IMG_NATIVE}" "${LATEST}"
+	docker buildx build --platform linux/amd64,linux/arm64 -f ./src/main/docker/Dockerfile.native -t "${IMG_NATIVE}" -t "${LATEST_NATIVE}" ${DOCKER_EXTRA_ARGS} .
 
 push-native:
-	docker push ${IMG_NATIVE}
-	docker push ${LATEST_NATIVE}
-	docker push ${LATEST}
+	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-native
 
 run-native:
 	docker run -p 8080:8080 -ti ${LATEST_NATIVE}

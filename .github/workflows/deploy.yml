@@ -23,13 +23,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build JVM Docker image
-        run: |
-          make build-jvm
-        env:
-          GIT_TAG: ${{ github.ref }}
-
-      - name: Push JVM Docker images
+      - name: Build and Push JVM Docker images
         run: |
           make push-jvm
         env:
@@ -54,13 +48,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Native Docker image
-        run: |
-          make build-native
-        env:
-          GIT_TAG: ${{ github.ref }}
-
-      - name: Push Native Docker images
+      - name: Build and Push Native Docker images
         run: |
           make push-native
         env:
