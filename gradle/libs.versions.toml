@@ -17,6 +17,8 @@ org-graalvm-buildtools-native = { id = "org.graalvm.buildtools.native", version 
 kotlin = "1.9.22"
 
 arrow = "1.2.1"
+## ⬆ = "1.2.2"
+## ⬆ = "1.2.3"
 
 ktor = "2.3.8"
 
@@ -27,6 +29,8 @@ kotlinx-serialization = "1.6.3"
 [libraries]
 
 logback-classic = "ch.qos.logback:logback-classic:1.5.0"
+##                                            ⬆ :1.5.1"
+##                                            ⬆ :1.5.2"
 
 kaml = "com.charleskorn.kaml:kaml:0.57.0"
 
