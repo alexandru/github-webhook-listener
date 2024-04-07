@@ -1,4 +1,5 @@
 val CirceVersion = "0.14.6"
+val CirceYamlVersion = "0.15.1"
 val MunitVersion = "0.7.29"
 val LogbackVersion = "1.5.3"
 val MunitCatsEffectVersion = "1.0.7"
@@ -18,8 +19,11 @@ lazy val root = (project in file("."))
             "com.github.pureconfig" %% "pureconfig-core" % PureConfigVersion,
             "com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % TapirVersion,
             "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % TapirVersion,
-            "com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % TapirVersion,
             "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % TapirVersion,
+            "io.circe" %% "circe-core" % CirceVersion,
+            "io.circe" %% "circe-generic" % CirceVersion,
+            "io.circe" %% "circe-parser" % CirceVersion,
+            "io.circe" %% "circe-yaml" % CirceYamlVersion,
             "org.http4s" %% "http4s-ember-server" % Http4sVersion,
             // -- For testing
             "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % TapirVersion % Test,
