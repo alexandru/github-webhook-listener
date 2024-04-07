@@ -1,6 +1,7 @@
 package org.alexn.hook
 
-import cats.effect.IO
+import cats.syntax.all.*
+import cats.effect.Async
 import io.circe.generic.auto.*
 import org.alexn.hook.Library.*
 import sttp.tapir.*
@@ -9,28 +10,35 @@ import sttp.tapir.json.circe.*
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.swagger.bundle.SwaggerInterpreter
 
-object Endpoints:
-    case class User(name: String) extends AnyVal
+class Endpoints[F[_]](using Async[F]):
+    import Endpoints.*
+
     val helloEndpoint: PublicEndpoint[User, Unit, String, Any] = endpoint.get
         .in("hello")
         .in(query[User]("name"))
         .out(stringBody)
-    val helloServerEndpoint: ServerEndpoint[Any, IO] =
-        helloEndpoint.serverLogicSuccess(user => IO.pure(s"Hello ${user.name}"))
-
+    val helloServerEndpoint: ServerEndpoint[Any, F] =
+        helloEndpoint.serverLogicSuccess(user => s"Hello ${user.name}".pure[F])
     val booksListing: PublicEndpoint[Unit, Unit, List[Book], Any] = endpoint.get
         .in("books" / "list" / "all")
         .out(jsonBody[List[Book]])
-    val booksListingServerEndpoint: ServerEndpoint[Any, IO] =
-        booksListing.serverLogicSuccess(_ => IO.pure(Library.books))
 
-    val apiEndpoints: List[ServerEndpoint[Any, IO]] =
+    val booksListingServerEndpoint: ServerEndpoint[Any, F] =
+        booksListing.serverLogicSuccess(_ => Library.books.pure[F])
+
+    val apiEndpoints: List[ServerEndpoint[Any, F]] =
         List(helloServerEndpoint, booksListingServerEndpoint)
 
-    val docEndpoints: List[ServerEndpoint[Any, IO]] = SwaggerInterpreter()
-        .fromServerEndpoints[IO](apiEndpoints, "github-webhook-listener", "1.0.0")
+    val docEndpoints: List[ServerEndpoint[Any, F]] = SwaggerInterpreter()
+        .fromServerEndpoints[F](apiEndpoints, "github-webhook-listener", "1.0.0")
 
-    val all: List[ServerEndpoint[Any, IO]] = apiEndpoints ++ docEndpoints
+    val all: List[ServerEndpoint[Any, F]] =
+        apiEndpoints ++ docEndpoints
+
+object Endpoints:
+    def apply[F[_]](using Async[F]): Endpoints[F] = new Endpoints[F]
+
+    case class User(name: String) extends AnyVal
 
 object Library:
     case class Author(name: String)

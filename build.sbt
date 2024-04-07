@@ -1,10 +1,10 @@
 val CirceVersion = "0.14.6"
 val CirceYamlVersion = "0.15.1"
-val MunitVersion = "0.7.29"
+val DeclineVersion = "2.4.1"
+val Http4sVersion = "0.23.26"
 val LogbackVersion = "1.5.3"
 val MunitCatsEffectVersion = "1.0.7"
-val PureConfigVersion = "0.17.5"
-val Http4sVersion = "0.23.26"
+val MunitVersion = "0.7.29"
 val TapirVersion = "1.10.3"
 
 lazy val root = (project in file("."))
@@ -16,7 +16,6 @@ lazy val root = (project in file("."))
         scalaVersion := "3.3.1",
         libraryDependencies ++= Seq(
             "ch.qos.logback" % "logback-classic" % LogbackVersion,
-            "com.github.pureconfig" %% "pureconfig-core" % PureConfigVersion,
             "com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % TapirVersion,
             "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % TapirVersion,
             "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % TapirVersion,
@@ -25,6 +24,7 @@ lazy val root = (project in file("."))
             "io.circe" %% "circe-parser" % CirceVersion,
             "io.circe" %% "circe-yaml" % CirceYamlVersion,
             "org.http4s" %% "http4s-ember-server" % Http4sVersion,
+            "com.monovore" %% "decline-effect" % DeclineVersion,
             // -- For testing
             "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % TapirVersion % Test,
             "org.scalameta" %% "munit" % MunitVersion % Test,

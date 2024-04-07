@@ -2,10 +2,12 @@ package org.alexn.hook
 
 import cats.effect.kernel.Sync
 import cats.syntax.all.given
+import com.comcast.ip4s.{Host, Port}
 import io.circe.generic.semiauto.*
 import io.circe.yaml.{Printer, parser}
 import io.circe.{Codec, Decoder, Encoder}
 import io.circe.syntax.*
+
 import java.io.File
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
@@ -15,10 +17,11 @@ final case class AppConfig(
     http: HttpConfig,
     projects: Map[String, ProjectConfig]
 ) derives Codec:
-    def serializeToYaml =
+    def serializeToYaml(spaces: Int = 2, dropNullKeys: Boolean = true) =
         io.circe.yaml.Printer(
-            dropNullKeys = true,
-            mappingStyle = Printer.FlowStyle.Block
+            dropNullKeys = dropNullKeys,
+            mappingStyle = Printer.FlowStyle.Block,
+            indent = spaces
         ).pretty(this.asJson)
 
 object AppConfig:
@@ -36,10 +39,23 @@ object AppConfig:
                 source.close()
 
 final case class HttpConfig(
-    port: Int,
-    host: Option[String],
+    port: Port,
+    host: Option[Host],
     path: Option[String]
 ) derives Codec
+
+object HttpConfig:
+    given Codec[Port] =
+        Codec.from(
+            Decoder[Int].emap(Port.fromInt(_).toRight("Invalid port")),
+            Encoder[Int].contramap(_.value)
+        )
+
+    given Codec[Host] =
+        Codec.from(
+            Decoder[String].emap(Host.fromString(_).toRight("Invalid host")),
+            Encoder[String].contramap(_.toString)
+        )
 
 final case class ProjectConfig(
     ref: String,

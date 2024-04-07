@@ -1,6 +1,7 @@
 package org.alexn.hook
 
 import cats.effect.IO
+import com.comcast.ip4s.Host
 import munit.CatsEffectSuite
 
 class AppConfigSuite extends CatsEffectSuite:
@@ -9,6 +10,7 @@ class AppConfigSuite extends CatsEffectSuite:
         |http:
         |  path: "/"
         |  port: 8080
+        |  host: myhost
         |
         |runtime:
         |  workers: 2
@@ -23,7 +25,11 @@ class AppConfigSuite extends CatsEffectSuite:
         |""".stripMargin
 
     val expected = AppConfig(
-        http = HttpConfig(path = Some("/"), port = 8080, host = None),
+        http = HttpConfig(
+            path = Some("/"),
+            port = Port.fromInt(8080).get,
+            host = Host.fromString("myhost").get
+        ),
         projects = Map(
             "myproject" -> ProjectConfig(
                 ref = "refs/heads/gh-pages",
