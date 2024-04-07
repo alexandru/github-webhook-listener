@@ -1,11 +1,10 @@
-val Http4sVersion = "0.23.25"
 val CirceVersion = "0.14.6"
 val MunitVersion = "0.7.29"
 val LogbackVersion = "1.5.3"
 val MunitCatsEffectVersion = "1.0.7"
 val PureConfigVersion = "0.17.5"
-
-lazy val printTransitiveDependencies = taskKey[Unit]("Print all transitive dependencies")
+val Http4sVersion = "0.23.26"
+val TapirVersion = "1.10.3"
 
 lazy val root = (project in file("."))
     .enablePlugins(NativeImagePlugin)
@@ -15,20 +14,25 @@ lazy val root = (project in file("."))
         version := "0.0.1-SNAPSHOT",
         scalaVersion := "3.3.1",
         libraryDependencies ++= Seq(
-            "org.http4s" %% "http4s-ember-server" % Http4sVersion,
-            "org.http4s" %% "http4s-ember-client" % Http4sVersion,
-            "org.http4s" %% "http4s-circe" % Http4sVersion,
-            "org.http4s" %% "http4s-dsl" % Http4sVersion,
+            "ch.qos.logback" % "logback-classic" % LogbackVersion,
             "com.github.pureconfig" %% "pureconfig-core" % PureConfigVersion,
+            "com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % TapirVersion,
+            "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % TapirVersion,
+            "com.softwaremill.sttp.tapir" %% "tapir-prometheus-metrics" % TapirVersion,
+            "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % TapirVersion,
+            "org.http4s" %% "http4s-ember-server" % Http4sVersion,
+            // -- For testing
+            "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % TapirVersion % Test,
             "org.scalameta" %% "munit" % MunitVersion % Test,
             "org.typelevel" %% "munit-cats-effect-3" % MunitCatsEffectVersion % Test,
-            "ch.qos.logback" % "logback-classic" % LogbackVersion
+            "com.softwaremill.sttp.client3" %% "circe" % "3.9.5" % Test
         ),
         assembly / assemblyMergeStrategy := {
             case "module-info.class" => MergeStrategy.discard
-            case x                   => (assembly / assemblyMergeStrategy).value.apply(x)
+            case x => (assembly / assemblyMergeStrategy).value.apply(x)
         },
         Compile / mainClass := Some("org.alexn.hook.Main"),
+        Compile / run / fork := true,
         nativeImageJvm := "graalvm-java21",
         nativeImageVersion := "21",
         nativeImageOptions ++= Seq(

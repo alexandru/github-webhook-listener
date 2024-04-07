@@ -7,11 +7,13 @@ import org.eclipse.jgit.api.Git
 import org.apache.ivy.plugins.repository.Resource
 import sbt.std.TaskStreams
 import sbt.util.Logger
+import java.util.concurrent.atomic.AtomicReference
+import NativeImageGenerateMetadataFiles._
 
-final class NativeImageGenerateMetadataFiles(
+final class NativeImageGenerateMetadataFiles private (
   targetDirectory: File,
+  cache: AtomicReference[Map[File, ArtefactFiles]]
 )(implicit logger: Logger) {
-  import NativeImageGenerateMetadataFiles._
 
   lazy val localRepoMetadata: File = {
     val remoteUrl = "https://github.com/oracle/graalvm-reachability-metadata.git"
@@ -115,8 +117,21 @@ final class NativeImageGenerateMetadataFiles(
         acc ++ ArtefactFiles(None, Some(readAndDecodeResource[List[JsonObject]](name)))
     }
 
-  def generateResourceFiles(root: File, items: List[ResourceType]): List[File] =
-    buildResources(items.toList).writeFilesContent(root)
+  def generateResourceFiles(root: File, items: List[ResourceType]): List[File] = {
+    val expectedFiles = List(
+      new File(root, "reflect-config.json"),
+      new File(root, "resource-config.json")
+    )
+    val generate = !ref.get.contains(root) || !expectedFiles.forall(_.exists())
+    if (generate) {
+      val files = buildResources(items.toList)
+      ref.accumulateAndGet(Map(root -> files), _ ++ _)
+      files.writeFilesContent(root)
+    } else {
+      logger.debug(s"[native-image-utils] Skipping generation of resources in $root")
+    }
+    expectedFiles
+  }
 
   private def readAndDecodeFile[T: Decoder](file: File): T = {
     val jsonTxt = scala.io.Source.fromFile(file).mkString
@@ -131,12 +146,14 @@ final class NativeImageGenerateMetadataFiles(
 }
 
 object NativeImageGenerateMetadataFiles {
+  private lazy val ref = new AtomicReference(Map.empty[File, ArtefactFiles])
+
   def generateResourceFiles(
     targetDirectory: File,
     generatedFilesDirectory: File,
     items: List[ResourceType]
   )(implicit logger: Logger): List[File] =
-    new NativeImageGenerateMetadataFiles(targetDirectory)
+    new NativeImageGenerateMetadataFiles(targetDirectory, ref)
       .generateResourceFiles(generatedFilesDirectory, items)
 
   case class Module(

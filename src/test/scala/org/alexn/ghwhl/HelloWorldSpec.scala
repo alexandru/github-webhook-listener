@@ -1,23 +1,47 @@
 package org.alexn.hook
 
 import cats.effect.IO
-import org.http4s.*
-import org.http4s.implicits.*
 import munit.CatsEffectSuite
+import org.alexn.hook.Endpoints.*
+import sttp.client3.{UriContext, basicRequest}
+import sttp.client3.testing.SttpBackendStub
+import sttp.tapir.integ.cats.effect.CatsMonadError
+import sttp.tapir.server.stub.TapirStubInterpreter
+import io.circe.generic.auto.*
+import sttp.client3.circe.*
+import org.alexn.hook.Library.Book
+import org.alexn.hook.Library.books
 
 class HelloWorldSpec extends CatsEffectSuite:
 
-    test("HelloWorld returns status code 200") {
-        assertIO(retHelloWorld.map(_.status), Status.Ok)
-    }
+    test("return hello world"):
+        // given
+        val backendStub = TapirStubInterpreter(SttpBackendStub(new CatsMonadError[IO]()))
+            .whenServerEndpointRunLogic(helloServerEndpoint)
+            .backend()
 
-    test("HelloWorld returns hello world message") {
-        assertIO(retHelloWorld.flatMap(_.as[String]), "{\"message\":\"Hello, world\"}")
-    }
+        // when
+        val response = basicRequest
+            .get(uri"http://test.com/hello?name=adam")
+            .send(backendStub)
 
-    private[this] lazy val retHelloWorld: IO[Response[IO]] =
-        val getHW = Request[IO](Method.GET, uri"/hello/world")
-        val helloWorld = HelloWorld.impl
-        HookRoutes.helloWorldRoutes(helloWorld).orNotFound(getHW)
+        // then
+        assertIO(response.map(_.body), Right("Hello adam"))
+
+    test("list available books"):
+        // given
+        val backendStub = TapirStubInterpreter(SttpBackendStub(new CatsMonadError[IO]()))
+            .whenServerEndpointRunLogic(booksListingServerEndpoint)
+            .backend()
+
+        // when
+        val response = basicRequest
+            .get(uri"http://test.com/books/list/all")
+            .response(asJson[List[Book]])
+            .send(backendStub)
+            .map(_.body)
+
+        // then
+        assertIO(response, Right(books))
 
 end HelloWorldSpec
