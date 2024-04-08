@@ -6,6 +6,13 @@ LATEST_JVM    := ${NAME}:jvm-latest
 LATEST_NATIVE := ${NAME}:native-latest
 LATEST        := ${NAME}:latest
 
+dependency-updates:
+	./gradlew dependencyUpdates \
+		-Drevision=release \
+		-DoutputFormatter=html \
+		--refresh-dependencies && \
+		open build/dependencyUpdates/report.html
+
 init-docker:
 	docker buildx inspect mybuilder || docker buildx create --name mybuilder
 	docker buildx use mybuilder
@@ -25,6 +32,8 @@ build-native: init-docker
 push-native:
 	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-native
 
-run-native:
-	docker run -p 8080:8080 -ti ${LATEST_NATIVE}
+build-native-local:
+	docker build -f ./src/main/docker/Dockerfile.native -t "${IMG_NATIVE}" -t "${LATEST_NATIVE}" -t "${LATEST}" .
 
+run-native: build-native-local
+	docker run -p 8080:8080 -ti ${LATEST_NATIVE}

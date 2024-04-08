@@ -1,19 +1,23 @@
 package org.alexn.hook
 
-import kotlinx.cli.ArgParser
-import kotlinx.cli.ArgType
-import kotlinx.coroutines.runBlocking
+import arrow.continuations.SuspendApp
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.arguments.argument
 import java.io.File
 
-fun main(args: Array<String>) {
-    val parser = ArgParser(programName = "github-webhook-listener")
-    val configPath by parser.argument(
-        ArgType.String,
-        fullName = "config-path",
-        description = "Path to the application configuration",
-    )
+class RunServer : CliktCommand(
+    name = "github-webhook-listener",
+    help = "Start the server",
+) {
+    val configPath by argument(help = "Path to the application configuration")
 
-    parser.parse(args)
-    val config = AppConfig.parseYaml(File(configPath))
-    runBlocking { startServer(config) }
+    override fun run() =
+        SuspendApp {
+            val config = AppConfig.parseYaml(File(configPath))
+            startServer(config)
+        }
+}
+
+fun main(args: Array<String>) {
+    RunServer().main(args)
 }
