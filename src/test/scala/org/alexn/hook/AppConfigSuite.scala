@@ -1,8 +1,10 @@
 package org.alexn.hook
 
 import cats.effect.IO
-import com.comcast.ip4s.Host
+import com.comcast.ip4s.{Host, Port}
 import munit.CatsEffectSuite
+
+import java.io.File
 
 class AppConfigSuite extends CatsEffectSuite:
     val configText =
@@ -28,12 +30,12 @@ class AppConfigSuite extends CatsEffectSuite:
         http = HttpConfig(
             path = Some("/"),
             port = Port.fromInt(8080).get,
-            host = Host.fromString("myhost").get
+            host = Host.fromString("myhost")
         ),
         projects = Map(
             "myproject" -> ProjectConfig(
                 ref = "refs/heads/gh-pages",
-                directory = "/var/www/myproject",
+                directory = new File("/var/www/myproject"),
                 command = "git pull",
                 secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx",
                 action = None,
@@ -44,7 +46,7 @@ class AppConfigSuite extends CatsEffectSuite:
 
     test("codec works"):
         for
-            serialized <- IO(expected.serializeToYaml)
+            serialized <- IO(expected.serializeToYaml())
             parsed <- IO.fromEither(AppConfig.parseYaml(serialized))
         yield assertEquals(parsed, expected)
 

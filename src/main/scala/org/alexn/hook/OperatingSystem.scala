@@ -92,5 +92,5 @@ class OperatingSystem[F[_]](using Async[F], Env[F], Logger[F]):
 end OperatingSystem
 
 object OperatingSystem:
-    def apply[F[_]](using Async[F], Env[F], Logger[F]): OperatingSystem[F] =
-        new OperatingSystem[F]
+    inline def apply[F[_]](using OperatingSystem[F]): OperatingSystem[F] =
+        summon[OperatingSystem[F]]

@@ -59,7 +59,7 @@ object HttpConfig:
 
 final case class ProjectConfig(
     ref: String,
-    directory: String,
+    directory: File,
     command: String,
     secret: String,
     action: Option[String],
@@ -67,6 +67,15 @@ final case class ProjectConfig(
 ) derives Codec
 
 object ProjectConfig:
+    given Codec[File] =
+        Codec.from(
+            Decoder[String].emap: s =>
+                val file = File(s)
+                if file.exists && file.exists() then Right(file)
+                else Left(s"Path $s does not exist or isn't a directory")
+            ,
+            Encoder[String].contramap(_.getAbsolutePath)
+        )
     given Codec[FiniteDuration] =
         val ExtractWithUnit = """^(\d+)\\s*([a-zA-Z]+)$""".r
         val decoder = Decoder.decodeString.emap:
