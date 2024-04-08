@@ -6,6 +6,8 @@ val LogbackVersion = "1.5.3"
 val MunitCatsEffectVersion = "1.0.7"
 val MunitVersion = "0.7.29"
 val TapirVersion = "1.10.3"
+val CommonsCodecVersion = "1.16.1"
+val CommonsTextVersion = "1.11.0"
 
 lazy val root = (project in file("."))
     .enablePlugins(NativeImagePlugin)
@@ -16,15 +18,17 @@ lazy val root = (project in file("."))
         scalaVersion := "3.3.1",
         libraryDependencies ++= Seq(
             "ch.qos.logback" % "logback-classic" % LogbackVersion,
+            "com.monovore" %% "decline-effect" % DeclineVersion,
             "com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % TapirVersion,
             "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % TapirVersion,
             "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % TapirVersion,
+            "commons-codec" % "commons-codec" % CommonsCodecVersion,
             "io.circe" %% "circe-core" % CirceVersion,
             "io.circe" %% "circe-generic" % CirceVersion,
             "io.circe" %% "circe-parser" % CirceVersion,
             "io.circe" %% "circe-yaml" % CirceYamlVersion,
+            "org.apache.commons" % "commons-text" % CommonsTextVersion,
             "org.http4s" %% "http4s-ember-server" % Http4sVersion,
-            "com.monovore" %% "decline-effect" % DeclineVersion,
             // -- For testing
             "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % TapirVersion % Test,
             "org.scalameta" %% "munit" % MunitVersion % Test,
@@ -51,10 +55,10 @@ lazy val root = (project in file("."))
             "-H:+InstallExitHandlers",
             "-H:+ReportUnsupportedElementsAtRuntime",
             "-H:+ReportExceptionStackTraces",
-            "-H:-UnlockExperimentalVMOptions",
+            "-H:-UnlockExperimentalVMOptions"
         ),
         Compile / resourceGenerators += Def.task {
-            import NativeImageGenerateMetadataFiles._
+            import NativeImageGenerateMetadataFiles.*
             implicit val logger: sbt.util.Logger = sbt.Keys.streams.value.log
             generateResourceFiles(
                 // Path needed for cloning the metadata repository
@@ -73,5 +77,5 @@ lazy val root = (project in file("."))
 Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / excludeLintKeys ++= Set(
     nativeImageVersion,
-    nativeImageJvm,
+    nativeImageJvm
 )

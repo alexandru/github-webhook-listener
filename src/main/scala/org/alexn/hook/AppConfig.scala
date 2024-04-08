@@ -77,6 +77,8 @@ object ProjectConfig:
                 other.toIntOption match
                 case Some(value) => Right(FiniteDuration(value, TimeUnit.MILLISECONDS))
                 case None => Left("Invalid duration")
+        .orElse(Decoder[java.time.Duration].map: d =>
+            FiniteDuration(d.toMillis, TimeUnit.MILLISECONDS))
         val encoder = Encoder.encodeString.contramap[FiniteDuration]: duration =>
             s"${duration.length} ${duration.unit}"
         Codec.from(decoder, encoder)
