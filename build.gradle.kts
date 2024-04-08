@@ -27,21 +27,29 @@ application {
 // https://ktor.io/docs/graalvm.html#execute-the-native-image-tool
 // https://github.com/ktorio/ktor-samples/blob/main/graalvm/build.gradle.kts
 graalvmNative {
+    // https://github.com/oracle/graalvm-reachability-metadata
+    // https://graalvm.github.io/native-build-tools/latest/gradle-plugin.html#metadata-support
+    metadataRepository {
+        enabled = true
+        // https://github.com/oracle/graalvm-reachability-metadata/releases/
+        version = "0.3.7"
+    }
+
     binaries {
         named("main") {
             fallback.set(false)
             verbose.set(true)
 
-            buildArgs.add("--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback,org.slf4j.impl.StaticLoggerBinder")
             buildArgs.add("--initialize-at-build-time=io.ktor,kotlinx,kotlin")
-
+            buildArgs.add("--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback,org.slf4j.impl.StaticLoggerBinder")
+            buildArgs.add("--no-fallback")
             buildArgs.add("-H:+InstallExitHandlers")
-            buildArgs.add("-H:+ReportUnsupportedElementsAtRuntime")
             buildArgs.add("-H:+ReportExceptionStackTraces")
-            buildArgs.add("-R:MinHeapSize=2m")
+            buildArgs.add("-H:+ReportUnsupportedElementsAtRuntime")
             buildArgs.add("-R:MaxHeapSize=30m")
             buildArgs.add("-R:MaxNewSize=2m")
-            buildArgs.add("--no-fallback")
+            buildArgs.add("-R:MinHeapSize=2m")
+            buildArgs.add("-march=native")
 
             imageName.set("github-webhook-listener")
         }

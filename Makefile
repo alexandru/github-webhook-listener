@@ -25,6 +25,8 @@ build-native: init-docker
 push-native:
 	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-native
 
-run-native:
-	docker run -p 8080:8080 -ti ${LATEST_NATIVE}
+build-native-local:
+	docker build -f ./src/main/docker/Dockerfile.native -t "${IMG_NATIVE}" -t "${LATEST_NATIVE}" -t "${LATEST}" .
 
+run-native: build-native-local
+	docker run -p 8080:8080 -ti ${LATEST_NATIVE}
