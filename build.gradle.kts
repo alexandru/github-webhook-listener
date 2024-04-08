@@ -51,7 +51,6 @@ graalvmNative {
             buildArgs.add("-R:MaxHeapSize=30m")
             buildArgs.add("-R:MaxNewSize=2m")
             buildArgs.add("-R:MinHeapSize=2m")
-            buildArgs.add("-march=native")
 
             imageName.set("github-webhook-listener")
         }
