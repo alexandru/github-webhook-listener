@@ -43,6 +43,7 @@ graalvmNative {
             buildArgs.add("--initialize-at-build-time=io.ktor,kotlinx,kotlin")
             buildArgs.add("--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback,org.slf4j.impl.StaticLoggerBinder")
             buildArgs.add("--no-fallback")
+            buildArgs.add("-H:+UnlockExperimentalVMOptions")
             buildArgs.add("-H:+InstallExitHandlers")
             buildArgs.add("-H:+ReportExceptionStackTraces")
             buildArgs.add("-H:+ReportUnsupportedElementsAtRuntime")
