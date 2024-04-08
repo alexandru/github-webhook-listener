@@ -14,11 +14,11 @@ org-graalvm-buildtools-native = { id = "org.graalvm.buildtools.native", version 
 
 [versions]
 
-kotlin = "1.9.22"
+kotlin = "1.9.23"
 
-arrow = "1.2.1"
+arrow = "1.2.4"
 
-ktor = "2.3.8"
+ktor = "2.3.10"
 
 kotlinx-cli = "0.3.6"
 
@@ -26,9 +26,9 @@ kotlinx-serialization = "1.6.3"
 
 [libraries]
 
-logback-classic = "ch.qos.logback:logback-classic:1.5.0"
+logback-classic = "ch.qos.logback:logback-classic:1.5.3"
 
-kaml = "com.charleskorn.kaml:kaml:0.57.0"
+kaml = "com.charleskorn.kaml:kaml:0.58.0"
 
 commons-codec = "commons-codec:commons-codec:1.16.1"
 
@@ -86,6 +86,6 @@ ktlint-cli = "com.pinterest.ktlint:ktlint-cli:1.1.1"
 
 kotlin-logging = "io.github.oshai:kotlin-logging:6.0.3"
 
-sarif4k = "io.github.detekt.sarif4k:sarif4k:0.5.0"
+sarif4k = "io.github.detekt.sarif4k:sarif4k:0.6.0"
 
 ktlint-cli-reporter-baseline = "com.pinterest.ktlint:ktlint-cli-reporter-baseline:1.1.1"
