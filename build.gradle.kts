@@ -66,6 +66,8 @@ dependencies {
     implementation(libs.arrow.core)
     implementation(libs.arrow.fx.coroutines)
     implementation(libs.arrow.fx.stm)
+    implementation(libs.arrow.suspendapp)
+    implementation(libs.clikt)
     implementation(libs.commons.codec)
     implementation(libs.commons.text)
     implementation(libs.kaml)

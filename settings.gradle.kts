@@ -12,6 +12,7 @@ dependencyResolutionManagement {
         create("libs") {
             version("arrow", "1.2.4")
             version("buildToolsNative", "0.10.1")
+            version("clikt", "4.3.0")
             version("commonsCodec", "1.16.1")
             version("commonsText", "1.11.0")
             version("kaml", "0.58.0")
@@ -76,6 +77,8 @@ dependencyResolutionManagement {
                 .versionRef("kaml")
             library("logback-classic", "ch.qos.logback", "logback-classic")
                 .versionRef("logback")
+            library("clikt", "com.github.ajalt.clikt", "clikt")
+                .versionRef("clikt")
 
             plugin("graalvm-buildtools-native", "org.graalvm.buildtools.native")
                 .versionRef("buildToolsNative")
