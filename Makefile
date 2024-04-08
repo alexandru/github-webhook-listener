@@ -6,6 +6,13 @@ LATEST_JVM    := ${NAME}:jvm-latest
 LATEST_NATIVE := ${NAME}:native-latest
 LATEST        := ${NAME}:latest
 
+dependency-updates:
+	./gradlew dependencyUpdates \
+		-Drevision=release \
+		-DoutputFormatter=html \
+		--refresh-dependencies && \
+		open build/dependencyUpdates/report.html
+
 init-docker:
 	docker buildx inspect mybuilder || docker buildx create --name mybuilder
 	docker buildx use mybuilder

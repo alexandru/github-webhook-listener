@@ -1,12 +1,13 @@
+import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
+
 plugins {
     application
-    kotlin("jvm")
-    id("io.ktor.plugin")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    // See https://github.com/JLLeitschuh/ktlint-gradle
-    id("org.jlleitschuh.gradle.ktlint")
-    // https://graalvm.github.io/native-build-tools/0.9.14/gradle-plugin.html
-    id("org.graalvm.buildtools.native")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.versions)
+    alias(libs.plugins.ktor)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.graalvm.buildtools.native)
 }
 
 group = "org.alexn.hook"
@@ -70,7 +71,6 @@ dependencies {
     implementation(libs.kaml)
     implementation(libs.kotlin.stdlib.jdk8)
     implementation(libs.kotlin.test.junit)
-    implementation(libs.kotlinx.cli)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cio)
@@ -94,6 +94,23 @@ tasks {
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = JavaVersion.VERSION_21.toString()
         kotlinOptions.javaParameters = true
+    }
+
+    named<DependencyUpdatesTask>("dependencyUpdates").configure {
+        fun isNonStable(version: String): Boolean {
+            val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
+            val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+            val isStable = stableKeyword || regex.matches(version)
+            return isStable.not()
+        }
+
+        rejectVersionIf {
+            isNonStable(candidate.version) && !isNonStable(currentVersion)
+        }
+        checkForGradleUpdate = true
+        outputFormatter = "html"
+        outputDir = "build/dependencyUpdates"
+        reportfileName = "report"
     }
 
     test {
