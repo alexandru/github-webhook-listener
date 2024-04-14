@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.deriving.Mirror
 
 extension (self: Codec.type)
-    inline def derived[A](using inline A: Mirror.Of[A]) =
+    inline def derived[A](using inline A: Mirror.Of[A]): Codec.AsObject[A] =
         io.circe.generic.semiauto.deriveCodec
 
 extension [A](self: A | Null)
