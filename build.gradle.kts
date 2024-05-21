@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.commons.codec)
     implementation(libs.commons.text)
     implementation(libs.kaml)
+    implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib.jdk8)
     implementation(libs.kotlin.test.junit)
     implementation(libs.kotlinx.serialization.json)
