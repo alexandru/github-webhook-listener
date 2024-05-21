@@ -23,7 +23,10 @@ build-jvm: init-docker
 push-jvm:
 	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-jvm
 
-run-jvm:
+build-jvm-local:
+	docker build -f ./src/main/docker/Dockerfile.jvm -t "${IMG_JVM}" -t "${LATEST_JVM}" .
+
+run-jvm: build-jvm-local
 	docker run -p 8080:8080 -ti ${LATEST_JVM}
 
 build-native: init-docker
