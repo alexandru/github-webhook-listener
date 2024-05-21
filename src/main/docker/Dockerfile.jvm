@@ -22,6 +22,7 @@ RUN $JAVA_HOME/bin/jlink \
         --add-modules java.base \
         --add-modules java.xml \
         --add-modules java.naming \
+        --add-modules java.management \
         --strip-debug \
         --no-man-pages \
         --no-header-files \

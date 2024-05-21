@@ -41,8 +41,11 @@ graalvmNative {
             fallback.set(false)
             verbose.set(true)
 
-            buildArgs.add("--initialize-at-build-time=io.ktor,kotlinx,kotlin")
+            buildArgs.add("--initialize-at-build-time=io.ktor,kotlinx,kotlin,org.xml.sax.helpers,org.slf4j.helpers")
             buildArgs.add("--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback,org.slf4j.impl.StaticLoggerBinder")
+            buildArgs.add("--initialize-at-build-time=com.github.ajalt.mordant.internal.nativeimage.NativeImagePosixMppImpls")
+            buildArgs.add("--initialize-at-build-time=ch.qos.logback.classic.Logger")
+
             buildArgs.add("--no-fallback")
             buildArgs.add("-H:+UnlockExperimentalVMOptions")
             buildArgs.add("-H:+InstallExitHandlers")
