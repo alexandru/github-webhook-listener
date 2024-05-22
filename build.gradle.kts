@@ -1,5 +1,5 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+// import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     application
@@ -86,23 +86,23 @@ dependencies {
     implementation(libs.logback.classic)
 }
 
-kotlin {
-    jvmToolchain(22)
-}
+// kotlin {
+//     jvmToolchain(22)
+// }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(22))
-    }
-}
+// java {
+//     toolchain {
+//         languageVersion.set(JavaLanguageVersion.of(22))
+//     }
+// }
 
 tasks {
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_22)
-            javaParameters = true
-        }
-    }
+    // withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    //     compilerOptions {
+    //         jvmTarget.set(JvmTarget.JVM_22)
+    //         javaParameters = true
+    //     }
+    // }
 
     named<DependencyUpdatesTask>("dependencyUpdates").configure {
         fun isNonStable(version: String): Boolean {

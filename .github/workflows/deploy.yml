@@ -1,7 +1,6 @@
 name: deploy
 on:
-  release:
-    types: [released]
+  workflow_dispatch:
 
 jobs:
   deploy_docker_jvm:
