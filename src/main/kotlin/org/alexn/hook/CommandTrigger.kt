@@ -3,11 +3,11 @@ package org.alexn.hook
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import arrow.fx.coroutines.Atomic
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeout
 import java.io.File
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -15,20 +15,22 @@ import kotlin.time.Duration.Companion.seconds
  */
 class CommandTrigger private constructor(
     private val projects: Map<String, AppConfig.Project>,
-    private val locks: Atomic<Map<String, Mutex>>,
+    private val locks: AtomicReference<Map<String, Mutex>>,
 ) {
-    private suspend fun lockFor(key: String): Mutex {
+    private fun lockFor(key: String): Mutex {
         val lockRef = locks.get()[key]
         if (lockRef != null) return lockRef
 
-        return locks.modify { currentMap ->
-            val r = currentMap[key]
-            if (r != null) return@modify currentMap to r
+        val updatedMap =
+            locks.updateAndGet { currentMap ->
+                val r = currentMap[key]
+                if (r != null) return@updateAndGet currentMap
 
-            val newRef = Mutex()
-            val newMap = currentMap + mapOf(key to newRef)
-            newMap to newRef
-        }
+                val newRef = Mutex()
+                val newMap = currentMap + mapOf(key to newRef)
+                newMap
+            }
+        return updatedMap[key]!!
     }
 
     suspend fun triggerCommand(key: String): Either<RequestError, Unit> {
@@ -74,10 +76,10 @@ class CommandTrigger private constructor(
         /**
          * Builder with side effects.
          */
-        suspend operator fun invoke(projects: Map<String, AppConfig.Project>): CommandTrigger =
+        operator fun invoke(projects: Map<String, AppConfig.Project>): CommandTrigger =
             CommandTrigger(
                 projects,
-                Atomic(mapOf()),
+                AtomicReference(mapOf()),
             )
     }
 }

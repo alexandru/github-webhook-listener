@@ -10,20 +10,21 @@ pluginManagement {
 dependencyResolutionManagement {
     versionCatalogs {
         create("libs") {
-            version("arrow", "1.2.4")
-            version("buildToolsNative", "0.10.2")
-            version("clikt", "4.4.0")
-            version("commonsCodec", "1.17.0")
-            version("commonsText", "1.12.0")
-            version("kaml", "0.59.0")
-            version("kotlin", "2.0.0")
-            version("kotlinLogging", "6.0.9")
-            version("ktlint", "12.1.1")
-            version("ktor", "2.3.11")
-            version("logback", "1.5.6")
-            version("serialization", "1.6.3")
+            version("arrow", "2.0.1")
+            version("buildToolsNative", "0.10.6")
+            version("clikt", "5.0.3")
+            version("commonsCodec", "1.18.0")
+            version("commonsText", "1.13.0")
+            version("kaml", "0.73.0")
+            version("kotlin", "2.1.20")
+            version("kotlinLogging", "7.0.5")
+            version("ktlint", "12.2.0")
+            version("ktor", "3.1.1")
+            version("ktorServerTests", "2.3.13")
+            version("logback", "1.5.18")
+            version("serialization", "1.8.0")
             version("suspendapp", "0.4.0")
-            version("versions", "0.51.0")
+            version("versions", "0.52.0")
 
             // https://plugins.gradle.org/plugin/org.jetbrains.kotlin.jvm
             plugin("kotlin-jvm", "org.jetbrains.kotlin.jvm")
@@ -50,7 +51,7 @@ dependencyResolutionManagement {
             library("ktor-server-html-builder", "io.ktor", "ktor-server-html-builder")
                 .versionRef("ktor")
             library("ktor-server-tests-jvm", "io.ktor", "ktor-server-tests-jvm")
-                .versionRef("ktor")
+                .versionRef("ktorServerTests")
 
             // https://github.com/JLLeitschuh/ktlint-gradle
             plugin("ktlint", "org.jlleitschuh.gradle.ktlint")
