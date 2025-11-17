@@ -27,8 +27,8 @@ async fn main() -> anyhow::Result<()> {
     // Parse command line arguments
     let args = Args::parse();
 
-    // Load configuration
-    let config = AppConfig::from_yaml_file(&args.config_path)?;
+    // Load configuration (auto-detects YAML or HOCON format)
+    let config = AppConfig::from_file(&args.config_path)?;
 
     // Start the server
     start_server(config).await?;

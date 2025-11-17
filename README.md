@@ -31,7 +31,11 @@ The Docker image contains a statically-linked Rust binary that is highly optimiz
 
 ### Server Configuration
 
-On its own this just starts the server, but doesn't know how to do anything. We'll need to specify a configuration file: Create your `./config.yaml`:
+The server supports both YAML and HOCON configuration formats. The format is automatically detected based on the file extension (`.yaml`/`.yml` for YAML, `.conf`/`.hocon` for HOCON).
+
+#### YAML Configuration
+
+Create your `./config.yaml`:
 
 ```yaml
 http:
@@ -43,7 +47,29 @@ projects:
     ref: "refs/heads/gh-pages"
     directory: "/var/www/myproject"
     command: "git pull"
+    timeout: "30s"
     secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+#### HOCON Configuration
+
+Alternatively, create your `./config.conf`:
+
+```hocon
+http {
+  path: "/"
+  port: 8080
+}
+
+projects {
+  myproject {
+    ref: "refs/heads/gh-pages"
+    directory: "/var/www/myproject"
+    command: "git pull"
+    timeout: "PT30S"
+    secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+}
 ```
 
 Notes:
@@ -52,6 +78,7 @@ Notes:
 2. `ref` says to only react on pushes to the `gh-pages` branch;
 3. `directory` is where the `command` should be executed;
 4. `command` is to be executed — note that `git` is not installed, see below;
+5. `timeout` can be specified in humantime format (e.g., "5s", "30s") for YAML or ISO 8601 format (e.g., "PT5S", "PT30S") for HOCON;
 
 You can then run the server:
 
