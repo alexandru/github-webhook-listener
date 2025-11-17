@@ -26,6 +26,7 @@ build/
 bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
+!**/src/bin/
 
 ### IntelliJ IDEA ###
 .idea
