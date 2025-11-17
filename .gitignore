@@ -2,6 +2,9 @@
 target/
 Cargo.lock
 
+# Test script build artifacts
+scripts/test-request/target/
+
 # Gradle/Kotlin (legacy)
 .gradle
 build/
