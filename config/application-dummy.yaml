@@ -9,5 +9,5 @@ projects:
     ref: "refs/heads/gh-pages"
     directory: "/tmp"
     command: "touch ./i-was-here.txt"
-    timeout: "PT5S"
+    timeout: "5s"
     secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"

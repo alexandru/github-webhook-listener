@@ -31,7 +31,11 @@ impl EventPayload {
     }
 
     /// Verify HMAC signature
-    pub fn verify_signature(body: &str, secret: &str, signature_header: Option<&str>) -> Result<()> {
+    pub fn verify_signature(
+        body: &str,
+        secret: &str,
+        signature_header: Option<&str>,
+    ) -> Result<()> {
         let signature = signature_header
             .ok_or_else(|| AppError::Forbidden("No signature header was provided".to_string()))?;
 
@@ -42,42 +46,44 @@ impl EventPayload {
             verify_hmac_sha1(body, secret, sig)?;
             Ok(())
         } else {
-            Err(AppError::Forbidden("Unsupported signature algorithm".to_string()))
+            Err(AppError::Forbidden(
+                "Unsupported signature algorithm".to_string(),
+            ))
         }
     }
 }
 
 fn verify_hmac_sha256(body: &str, secret: &str, expected_hex: &str) -> Result<()> {
     type HmacSha256 = Hmac<Sha256>;
-    
+
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
         .map_err(|e| AppError::Internal(format!("Invalid secret key: {}", e)))?;
-    
+
     mac.update(body.as_bytes());
-    
+
     let expected = hex::decode(expected_hex)
         .map_err(|_| AppError::Forbidden("Invalid signature format".to_string()))?;
-    
+
     mac.verify_slice(&expected)
         .map_err(|_| AppError::Forbidden("Invalid checksum (sha256)".to_string()))?;
-    
+
     Ok(())
 }
 
 fn verify_hmac_sha1(body: &str, secret: &str, expected_hex: &str) -> Result<()> {
     type HmacSha1 = Hmac<Sha1>;
-    
+
     let mut mac = HmacSha1::new_from_slice(secret.as_bytes())
         .map_err(|e| AppError::Internal(format!("Invalid secret key: {}", e)))?;
-    
+
     mac.update(body.as_bytes());
-    
+
     let expected = hex::decode(expected_hex)
         .map_err(|_| AppError::Forbidden("Invalid signature format".to_string()))?;
-    
+
     mac.verify_slice(&expected)
         .map_err(|_| AppError::Forbidden("Invalid checksum (sha1)".to_string()))?;
-    
+
     Ok(())
 }
 
@@ -126,17 +132,17 @@ mod tests {
     fn test_verify_signature_sha256() {
         let body = "test body";
         let secret = "test-secret";
-        
+
         // Generate the actual signature using hmac
         type HmacSha256 = Hmac<Sha256>;
         let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
         mac.update(body.as_bytes());
         let result = mac.finalize();
         let actual_sig = format!("sha256={}", hex::encode(result.into_bytes()));
-        
+
         // Test with correct signature
         EventPayload::verify_signature(body, secret, Some(&actual_sig)).unwrap();
-        
+
         // Test with wrong signature
         let wrong_sig = "sha256=0000000000000000000000000000000000000000000000000000000000000000";
         assert!(EventPayload::verify_signature(body, secret, Some(wrong_sig)).is_err());

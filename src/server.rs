@@ -27,16 +27,16 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
     };
 
     let base_path = config.http.base_path();
-    
+
     let mut app = Router::new();
-    
+
     // Add root GET handler
     if !base_path.is_empty() {
         app = app.route(&base_path, get(redirect_to_slash));
     }
     app = app.route(&format!("{}/", base_path), get(list_projects));
     app = app.route(&format!("{}/:project", base_path), post(handle_webhook));
-    
+
     let app = app.with_state(state);
 
     let addr = config.http.bind_address();
@@ -59,7 +59,7 @@ async fn redirect_to_slash() -> Response {
 
 async fn list_projects(State(state): State<AppState>) -> Html<String> {
     let project_names: Vec<String> = state.config.projects.keys().cloned().collect();
-    
+
     let html = format!(
         r#"<!DOCTYPE html>
 <html>
@@ -79,7 +79,7 @@ async fn list_projects(State(state): State<AppState>) -> Html<String> {
             .collect::<Vec<_>>()
             .join("\n")
     );
-    
+
     Html(html)
 }
 
@@ -90,11 +90,10 @@ async fn handle_webhook(
     body: Bytes,
 ) -> Result<Response> {
     // Get the project config
-    let project = state
-        .config
-        .projects
-        .get(&project_key)
-        .ok_or_else(|| AppError::NotFound(format!("Project `{}` does not exist", project_key)))?;
+    let project =
+        state.config.projects.get(&project_key).ok_or_else(|| {
+            AppError::NotFound(format!("Project `{}` does not exist", project_key))
+        })?;
 
     // Get body as string
     let body_str = std::str::from_utf8(&body)
@@ -105,7 +104,7 @@ async fn handle_webhook(
         .get("x-hub-signature-256")
         .or_else(|| headers.get("x-hub-signature"))
         .and_then(|v| v.to_str().ok());
-    
+
     EventPayload::verify_signature(body_str, &project.secret, signature)?;
 
     // Parse the payload based on content type

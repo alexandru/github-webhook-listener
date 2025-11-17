@@ -101,7 +101,7 @@ projects:
         assert_eq!(config.http.port, 8080);
         assert_eq!(config.http.host, Some("0.0.0.0".to_string()));
         assert_eq!(config.projects.len(), 1);
-        
+
         let project = config.projects.get("myproject").unwrap();
         assert_eq!(project.ref_name(), "refs/heads/gh-pages");
         assert_eq!(project.directory, "/tmp");

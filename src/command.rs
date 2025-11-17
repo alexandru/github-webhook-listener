@@ -56,7 +56,12 @@ impl CommandTrigger {
 
         info!("Executing command for project `{}`", key);
 
-        match timeout(timeout_duration, execute_shell_command(&project.command, &project.directory)).await {
+        match timeout(
+            timeout_duration,
+            execute_shell_command(&project.command, &project.directory),
+        )
+        .await
+        {
             Ok(Ok(result)) => {
                 if result.is_successful() {
                     info!("Command executed successfully for project `{}`", key);
@@ -78,7 +83,10 @@ impl CommandTrigger {
                 Err(e)
             }
             Err(_) => {
-                error!("Command timed out for project `{}` after {:?}", key, timeout_duration);
+                error!(
+                    "Command timed out for project `{}` after {:?}",
+                    key, timeout_duration
+                );
                 Err(AppError::Timeout(format!(
                     "Command execution timed-out after {:?}",
                     timeout_duration

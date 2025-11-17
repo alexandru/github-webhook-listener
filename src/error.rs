@@ -66,19 +66,17 @@ impl From<serde_urlencoded::de::Error> for AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
-            AppError::BadRequest(msg) => {
-                (StatusCode::BAD_REQUEST, format!("Bad request: {}", msg))
-            }
-            AppError::Json(e) => {
-                (StatusCode::BAD_REQUEST, format!("Invalid JSON: {}", e))
-            }
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, format!("Bad request: {}", msg)),
+            AppError::Json(e) => (StatusCode::BAD_REQUEST, format!("Invalid JSON: {}", e)),
             AppError::UrlEncoded(e) => {
                 (StatusCode::BAD_REQUEST, format!("Invalid form data: {}", e))
             }
             AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg.clone()),
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg.clone()),
             AppError::Timeout(msg) => (StatusCode::REQUEST_TIMEOUT, msg.clone()),
-            AppError::UnsupportedMediaType(msg) => (StatusCode::UNSUPPORTED_MEDIA_TYPE, msg.clone()),
+            AppError::UnsupportedMediaType(msg) => {
+                (StatusCode::UNSUPPORTED_MEDIA_TYPE, msg.clone())
+            }
             AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
             _ => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
         };
