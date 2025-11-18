@@ -1,6 +1,6 @@
-# GitHub Webhook Listener (ver. 2)
+# GitHub Webhook Listener (ver. 3)
 
-[![Build](https://github.com/alexandru/github-webhook-listener/workflows/build/badge.svg?branch=main)](https://github.com/alexandru/github-webhook-listener/actions?query=branch%3Amain+workflow%3Abuild) [![Deploy](https://github.com/alexandru/github-webhook-listener/workflows/deploy/badge.svg)](https://github.com/alexandru/github-webhook-listener/actions?query=workflow%3Adeploy)
+[![Build](https://github.com/alexandru/github-webhook-listener/actions/workflows/build.yml/badge.svg?branch=v3-rust)](https://github.com/alexandru/github-webhook-listener/actions/workflows/build.yml?query=branch%3Av3-rust) [![Deploy](https://github.com/alexandru/github-webhook-listener/actions/workflows/deploy.yml/badge.svg)](https://github.com/alexandru/github-webhook-listener/actions/workflows/deploy.yml)
 
 A simple web app that can be registered as a
 [GitHub Webhook](https://developer.github.com/webhooks/)
@@ -15,7 +15,7 @@ than 10 MB of RAM, so it can be installed on under-powered servers.
 
 > **NOTE**
 > 
-> This project has been rewritten in Rust (ver. 2.0). Previous versions were written in Kotlin (see [v1-kotlin](https://github.com/alexandru/github-webhook-listener/tree/v1-kotlin) branch) and Haskell (see [v1-haskell](https://github.com/alexandru/github-webhook-listener/tree/v1-haskell) branch). 
+> This project has been rewritten in Rust (ver. 3.0). Previous versions were written in Kotlin (see [v2-kotlin](https://github.com/alexandru/github-webhook-listener/tree/v2-kotlin) branch) and Haskell (see [v1-haskell](https://github.com/alexandru/github-webhook-listener/tree/v1-haskell) branch). 
 
 ## Setup
 
@@ -96,8 +96,6 @@ Note that we are forcing the use of `www-data` as the user. This is because we n
 You can also use a `docker-compose.yaml`:
 
 ```yaml
-version: '3.3'
-
 services:
   github-webhook-listener:
     container_name: github-webhook-listener
@@ -146,26 +144,39 @@ NOTEs on those fields:
 
 ## Development
 
-The project is written in [Rust](https://www.rust-lang.org/) using [Axum](https://github.com/tokio-rs/axum) as the web framework and [Tokio](https://tokio.rs/) as the async runtime.
+The project is written in [Rust](https://www.rust-lang.org/). To install the toolchain, which must include [Cargo](https://doc.rust-lang.org/cargo/), see [rustup](https://rustup.rs/).
 
-### Prerequisites
+The procedure for macOS:
 
-- Rust 1.75 or later
-- Cargo (comes with Rust)
+```bash
+brew install rustup-init
 
-### Running in development mode
+rustup-init -y
+rustup install stable
+rustup default stable
+rustup update
+rustup component add \
+  clippy \
+  rust-analyzer \
+  rust-docs \
+  rustfmt
+```
+
+### Useful commands
+
+Running in development mode:
 
 ```sh
 cargo run -- ./config/application-dummy.yaml
 ```
 
-### Running tests
+Running tests:
 
 ```sh
 cargo test
 ```
 
-### Building for production
+Building for production:
 
 ```sh
 cargo build --release
@@ -173,13 +184,13 @@ cargo build --release
 
 The optimized binary will be located at `target/release/github-webhook-listener`.
 
-### Building the Docker image
+Building the Docker image:
 
 ```sh
 make build-docker-local
 ```
 
-### Running the Docker image
+Running the Docker image:
 
 ```sh
 make run-docker
@@ -187,6 +198,6 @@ make run-docker
 
 ## License
 
-Copyright © 2018-2022 Alexandru Nedelcu, some rights reserved.
+Copyright © 2018-2025 Alexandru Nedelcu, some rights reserved.
 
 Licensed under the AGPL-3.0 license. See [LICENSE](./LICENSE).
