@@ -12,6 +12,7 @@ use axum::{
     routing::{get, post},
 };
 use std::sync::Arc;
+use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
 #[derive(Template)]
@@ -68,7 +69,29 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
         .await
         .map_err(|e| AppError::Internal(format!("Failed to bind to {}: {}", addr, e)))?;
 
+    // Create cancellation token for graceful shutdown
+    let cancellation_token = CancellationToken::new();
+    let shutdown_token = cancellation_token.clone();
+
+    // Spawn a task to listen for shutdown signals
+    tokio::spawn(async move {
+        match tokio::signal::ctrl_c().await {
+            Ok(()) => {
+                info!("Received shutdown signal, initiating graceful shutdown");
+                shutdown_token.cancel();
+            }
+            Err(err) => {
+                warn!("Unable to listen for shutdown signal: {}", err);
+            }
+        }
+    });
+
+    // Start server with graceful shutdown
     axum::serve(listener, app)
+        .with_graceful_shutdown(async move {
+            cancellation_token.cancelled().await;
+            info!("Shutting down server gracefully");
+        })
         .await
         .map_err(|e| AppError::Internal(format!("Server error: {}", e)))?;
 

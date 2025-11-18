@@ -4,11 +4,15 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 use tokio::sync::Mutex;
 use tokio::time::timeout;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
+
+/// Maximum time to wait for acquiring a lock (prevents deadlocks)
+const LOCK_ACQUISITION_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Result type for command execution containing exit code and output
 #[derive(Debug)]
@@ -54,7 +58,20 @@ impl CommandTrigger {
 
         let timeout_duration = project.timeout_duration();
         let lock = self.get_lock(key).await;
-        let _guard = lock.lock().await;
+        
+        // Acquire lock with timeout to prevent indefinite blocking
+        let _guard = timeout(LOCK_ACQUISITION_TIMEOUT, lock.lock())
+            .await
+            .map_err(|_| {
+                warn!(
+                    "Failed to acquire lock for project `{}` within {:?}",
+                    key, LOCK_ACQUISITION_TIMEOUT
+                );
+                AppError::Timeout(format!(
+                    "Failed to acquire lock within {:?}. Another command may be running.",
+                    LOCK_ACQUISITION_TIMEOUT
+                ))
+            })?;
 
         info!("Executing command for project `{}`", key);
 
@@ -126,9 +143,13 @@ async fn execute_shell_command(command: &str, directory: &str) -> Result<Command
             .map_err(|e| AppError::Internal(format!("Failed to read stderr: {}", e)))?;
     }
 
-    let status = child
-        .wait()
+    // Add timeout to wait operation to prevent hanging indefinitely
+    let status = timeout(Duration::from_secs(60), child.wait())
         .await
+        .map_err(|_| {
+            error!("Child process wait timed out after 60 seconds");
+            AppError::Timeout("Process wait timed out".to_string())
+        })?
         .map_err(|e| AppError::Internal(format!("Failed to wait for command: {}", e)))?;
 
     Ok(CommandResult {
@@ -190,5 +211,120 @@ mod tests {
         let trigger = CommandTrigger::new(projects);
         trigger.trigger_command("test-project").await.unwrap();
         assert!(test_file.exists());
+    }
+
+    #[tokio::test]
+    async fn test_command_timeout() {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path().to_str().unwrap().to_string();
+
+        let mut projects = HashMap::new();
+        projects.insert(
+            "slow-project".to_string(),
+            ProjectConfig {
+                git_ref: "refs/heads/main".to_string(),
+                directory: dir_path,
+                command: "sleep 10".to_string(),
+                secret: "secret".to_string(),
+                action: None,
+                timeout: Some(Duration::from_secs(1)), // Short timeout
+            },
+        );
+
+        let trigger = CommandTrigger::new(projects);
+        let result = trigger.trigger_command("slow-project").await;
+
+        assert!(result.is_err());
+        if let Err(AppError::Timeout(msg)) = result {
+            assert!(msg.contains("timed-out"));
+        } else {
+            panic!("Expected timeout error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_command_execution() {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path().to_str().unwrap().to_string();
+
+        let mut projects = HashMap::new();
+        projects.insert(
+            "concurrent-project".to_string(),
+            ProjectConfig {
+                git_ref: "refs/heads/main".to_string(),
+                directory: dir_path,
+                command: "sleep 2 && echo 'done'".to_string(),
+                secret: "secret".to_string(),
+                action: None,
+                timeout: Some(Duration::from_secs(5)),
+            },
+        );
+
+        let trigger = Arc::new(CommandTrigger::new(projects));
+
+        // Spawn two concurrent tasks for the same project
+        let trigger1 = trigger.clone();
+        let task1 = tokio::spawn(async move {
+            trigger1.trigger_command("concurrent-project").await
+        });
+
+        let trigger2 = trigger.clone();
+        let task2 = tokio::spawn(async move {
+            // Small delay to ensure task1 acquires the lock first
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            trigger2.trigger_command("concurrent-project").await
+        });
+
+        let result1 = task1.await.unwrap();
+        let result2 = task2.await.unwrap();
+
+        // Both should complete successfully (second one waits for first)
+        assert!(result1.is_ok());
+        assert!(result2.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_lock_acquisition_timeout() {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path().to_str().unwrap().to_string();
+
+        let mut projects = HashMap::new();
+        projects.insert(
+            "locked-project".to_string(),
+            ProjectConfig {
+                git_ref: "refs/heads/main".to_string(),
+                directory: dir_path,
+                command: "sleep 35".to_string(), // Longer than lock timeout
+                secret: "secret".to_string(),
+                action: None,
+                timeout: Some(Duration::from_secs(60)), // Long command timeout
+            },
+        );
+
+        let trigger = Arc::new(CommandTrigger::new(projects));
+
+        // Start a long-running command
+        let trigger1 = trigger.clone();
+        let task1 = tokio::spawn(async move {
+            trigger1.trigger_command("locked-project").await
+        });
+
+        // Try to run another command immediately
+        let trigger2 = trigger.clone();
+        let task2 = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            trigger2.trigger_command("locked-project").await
+        });
+
+        let _result1 = task1.await.unwrap(); // This should complete
+        let result2 = task2.await.unwrap(); // This should timeout waiting for lock
+
+        // Second task should timeout on lock acquisition
+        assert!(result2.is_err());
+        if let Err(AppError::Timeout(msg)) = result2 {
+            assert!(msg.contains("acquire lock"));
+        } else {
+            panic!("Expected lock acquisition timeout error, got: {:?}", result2);
+        }
     }
 }

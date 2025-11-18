@@ -28,6 +28,7 @@ hex = "0.4"
 
 # Async runtime
 async-trait = "0.1"
+tokio-util = "0.7"
 
 # Logging
 tracing = "0.1"
