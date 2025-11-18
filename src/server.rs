@@ -119,16 +119,14 @@ async fn handle_webhook(
     }
 
     // Execute the command
-    match state.command_trigger.trigger_command(&project_key).await {
-        Ok(_) => {
-            info!("POST /{} — OK", project_key);
-            Ok((StatusCode::OK, "OK").into_response())
-        }
-        Err(e) => {
-            warn!("POST /{} — Error: {}", project_key, e);
-            Err(e)
-        }
-    }
+    state
+        .command_trigger
+        .trigger_command(&project_key)
+        .await
+        .inspect(|_| info!("POST /{} — OK", project_key))
+        .inspect_err(|e| warn!("POST /{} — Error: {}", project_key, e))?;
+    
+    Ok((StatusCode::OK, "OK").into_response())
 }
 
 #[cfg(test)]
