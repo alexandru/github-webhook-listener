@@ -15,7 +15,7 @@ than 10 MB of RAM, so it can be installed on under-powered servers.
 
 > **NOTE**
 > 
-> This used to be a Haskell project, that I switched to Kotlin. The code is still available on the [v1-haskell](https://github.com/alexandru/github-webhook-listener/tree/v1-haskell) branch. 
+> This project has been rewritten in Rust (ver. 2.0). Previous versions were written in Kotlin (see [v1-kotlin](https://github.com/alexandru/github-webhook-listener/tree/v1-kotlin) branch) and Haskell (see [v1-haskell](https://github.com/alexandru/github-webhook-listener/tree/v1-haskell) branch). 
 
 ## Setup
 
@@ -24,24 +24,18 @@ Docker images are published via [GitHub's Packages](https://github.com/alexandru
 ```sh
 docker run \
   -p 8080:8080 \
-  -ti ghcr.io/alexandru/github-webhook-listener:native-latest
+  -ti ghcr.io/alexandru/github-webhook-listener:latest
 ```
 
-There are 2 versions of this project being published. The default is a binary compiled to a native executable via [GraalVM's Native Image](https://www.graalvm.org/22.1/reference-manual/native-image/). The other image is a JAR that runs with OpenJDK. You can choose between them via the tag used. To use the OpenJDK version, look for tags prefixed with `jvm-`:
-
-```sh
-docker run \
-  -p 8080:8080 \
-  -ti ghcr.io/alexandru/github-webhook-listener:jvm-latest
-```
-
-### Which version to choose?
-
-The native version (e.g., the `native-latest` tag) uses under 10 MB of RAM, and it's good for underpowered servers. The JVM version (e.g., `jvm-latest`) has at least a 50 MB penalty, so use it only if you bump into problems with the native version. The JVM's execution is optimized with the Shenandoah GC, though, releasing memory back to the OS, it's as optimal as a Java process can be, and if you have the RAM, you might prefer it.
+The Docker image contains a statically-linked Rust binary that is highly optimized for size and performance, using less than 10 MB of RAM in typical usage.
 
 ### Server Configuration
 
-On its own this just starts the server, but doesn't know how to do anything. We'll need to specify a configuration file: Create your `./config.yaml`:
+The server supports both YAML and HOCON configuration formats. The format is automatically detected based on the file extension (`.yaml`/`.yml` for YAML, `.conf`/`.hocon` for HOCON).
+
+#### YAML Configuration
+
+Create your `./config.yaml`:
 
 ```yaml
 http:
@@ -53,7 +47,29 @@ projects:
     ref: "refs/heads/gh-pages"
     directory: "/var/www/myproject"
     command: "git pull"
+    timeout: "30s"
     secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+#### HOCON Configuration
+
+Alternatively, create your `./config.conf`:
+
+```hocon
+http {
+  path: "/"
+  port: 8080
+}
+
+projects {
+  myproject {
+    ref: "refs/heads/gh-pages"
+    directory: "/var/www/myproject"
+    command: "git pull"
+    timeout: "PT30S"
+    secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+}
 ```
 
 Notes:
@@ -62,6 +78,7 @@ Notes:
 2. `ref` says to only react on pushes to the `gh-pages` branch;
 3. `directory` is where the `command` should be executed;
 4. `command` is to be executed — note that `git` is not installed, see below;
+5. `timeout` can be specified in humantime format (e.g., "5s", "30s") for YAML or ISO 8601 format (e.g., "PT5S", "PT30S") for HOCON;
 
 You can then run the server:
 
@@ -129,41 +146,44 @@ NOTEs on those fields:
 
 ## Development
 
-The project uses [Kotlin](https://kotlinlang.org/) as the programming language, with [Ktor](https://ktor.io/). And the setup is optimized for [GraalVM's Native Image](https://www.graalvm.org/22.2/reference-manual/native-image/).
+The project is written in [Rust](https://www.rust-lang.org/) using [Axum](https://github.com/tokio-rs/axum) as the web framework and [Tokio](https://tokio.rs/) as the async runtime.
 
-To run the project in development mode:
+### Prerequisites
 
-```sh
-./gradlew run -Pdevelopment --args="./config/application-dummy.conf"
-```
+- Rust 1.75 or later
+- Cargo (comes with Rust)
 
-To run after adding new dependencies:
-
-```sh
-./gradlew refreshVersionsMigrate  --mode=VersionCatalogOnly
-```
-
-To update project dependencies:
+### Running in development mode
 
 ```sh
-./gradlew refreshVersions
+cargo run -- ./config/application-dummy.yaml
 ```
 
-To build the Docker image for the JVM version from scratch:
-
-```sh 
-make build-jvm
-```
-
-Or the native version:
+### Running tests
 
 ```sh
-make build-native
+cargo test
 ```
 
-### Issues with native-image
+### Building for production
 
-- [Kotlinx Serialization with GraalVM Native Images](https://github.com/Kotlin/kotlinx.serialization/issues/1125)
+```sh
+cargo build --release
+```
+
+The optimized binary will be located at `target/release/github-webhook-listener`.
+
+### Building the Docker image
+
+```sh
+make build-docker-local
+```
+
+### Running the Docker image
+
+```sh
+make run-docker
+```
 
 ## License
 

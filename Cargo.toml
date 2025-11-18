@@ -1,0 +1,59 @@
+[package]
+name = "github-webhook-listener"
+version = "2.0.0"
+edition = "2021"
+authors = ["Alexandru Nedelcu"]
+license = "AGPL-3.0"
+description = "A simple web app that can be registered as a GitHub Webhook and trigger shell commands in response to events"
+
+[dependencies]
+# HTTP server
+axum = "0.7"
+tokio = { version = "1.40", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+serde_urlencoded = "0.7"
+hocon-rs = "0.1"
+
+# Cryptography for HMAC
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+hex = "0.4"
+
+# Async runtime
+async-trait = "0.1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI argument parsing
+clap = { version = "4.5", features = ["derive"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Time parsing
+humantime-serde = "1.1"
+humantime = "2.1"
+iso8601-duration = "0.2"
+
+# HTML rendering
+askama = "0.12"
+
+[dev-dependencies]
+tempfile = "3.8"
+reqwest = { version = "0.12", features = ["json"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
