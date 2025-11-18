@@ -5,6 +5,9 @@ on:
 jobs:
   build_matrix:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         platform: [linux/amd64, linux/arm64]
@@ -34,6 +37,9 @@ jobs:
   create_manifest:
     needs: build_matrix
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
