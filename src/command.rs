@@ -10,6 +10,7 @@ use tokio::sync::Mutex;
 use tokio::time::timeout;
 use tracing::{debug, error, info};
 
+/// Result type for command execution containing exit code and output
 #[derive(Debug)]
 pub struct CommandResult {
     pub exit_code: i32,
@@ -23,6 +24,7 @@ impl CommandResult {
     }
 }
 
+/// Manages command execution with per-project locking to prevent concurrent runs
 pub struct CommandTrigger {
     projects: HashMap<String, ProjectConfig>,
     locks: Arc<Mutex<HashMap<String, Arc<Mutex<()>>>>>,
@@ -56,42 +58,35 @@ impl CommandTrigger {
 
         info!("Executing command for project `{}`", key);
 
-        match timeout(
+        let result = timeout(
             timeout_duration,
             execute_shell_command(&project.command, &project.directory),
         )
         .await
-        {
-            Ok(Ok(result)) => {
-                if result.is_successful() {
-                    info!("Command executed successfully for project `{}`", key);
-                    debug!("stdout: {}", result.stdout);
-                    Ok(())
-                } else {
-                    error!(
-                        "Command failed for project `{}` with exit code {}: stderr={}",
-                        key, result.exit_code, result.stderr
-                    );
-                    Err(AppError::Internal(format!(
-                        "Command execution failed with exit code {}\nstdout: {}\nstderr: {}",
-                        result.exit_code, result.stdout, result.stderr
-                    )))
-                }
-            }
-            Ok(Err(e)) => {
-                error!("Command failed for project `{}`: {}", key, e);
-                Err(e)
-            }
-            Err(_) => {
-                error!(
-                    "Command timed out for project `{}` after {:?}",
-                    key, timeout_duration
-                );
-                Err(AppError::Timeout(format!(
-                    "Command execution timed-out after {:?}",
-                    timeout_duration
-                )))
-            }
+        .map_err(|_| {
+            error!(
+                "Command timed out for project `{}` after {:?}",
+                key, timeout_duration
+            );
+            AppError::Timeout(format!(
+                "Command execution timed-out after {:?}",
+                timeout_duration
+            ))
+        })??;
+
+        if result.is_successful() {
+            info!("Command executed successfully for project `{}`", key);
+            debug!("stdout: {}", result.stdout);
+            Ok(())
+        } else {
+            error!(
+                "Command failed for project `{}` with exit code {}: stderr={}",
+                key, result.exit_code, result.stderr
+            );
+            Err(AppError::Internal(format!(
+                "Command execution failed with exit code {}\nstdout: {}\nstderr: {}",
+                result.exit_code, result.stdout, result.stderr
+            )))
         }
     }
 }

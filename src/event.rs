@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::Sha256;
 
+/// GitHub webhook event payload containing action and git ref information
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EventPayload {
     pub action: Option<String>,
