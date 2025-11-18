@@ -8,8 +8,8 @@ description = "A simple web app that can be registered as a GitHub Webhook and t
 
 [dependencies]
 # HTTP server
-axum = "0.7"
-tokio = { version = "1.40", features = ["full"] }
+axum = "0.8"
+tokio = { version = "1.48", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace"] }
 
@@ -38,7 +38,7 @@ clap = { version = "4.5", features = ["derive"] }
 
 # Error handling
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 
 # Time parsing
 humantime-serde = "1.1"
@@ -46,10 +46,10 @@ humantime = "2.1"
 iso8601-duration = "0.2"
 
 # HTML rendering
-askama = "0.12"
+askama = "0.14"
 
 [dev-dependencies]
-tempfile = "3.8"
+tempfile = "3.23"
 reqwest = { version = "0.12", features = ["json"] }
 
 [profile.release]

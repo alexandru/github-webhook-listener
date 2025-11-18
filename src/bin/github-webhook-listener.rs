@@ -1,5 +1,5 @@
 use clap::Parser;
-use github_webhook_listener::{server::start_server, AppConfig};
+use github_webhook_listener::{AppConfig, server::start_server};
 use std::path::PathBuf;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
