@@ -1,3 +1,16 @@
+#!/usr/bin/env -S cargo +nightly -Zscript --quiet
+---
+[package]
+edition = "2024"
+
+[dependencies]
+reqwest = { version = "0.12", features = ["blocking"] }
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+hex = "0.4"
+---
+
 use hmac::{Hmac, Mac};
 use sha1::Sha1;
 use sha2::Sha256;

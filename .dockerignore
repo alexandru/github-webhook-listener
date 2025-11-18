@@ -1,0 +1,47 @@
+# Rust build artifacts
+target/
+debug/
+release/
+
+# Cargo lock for libraries (keep if binary)
+# Cargo.lock
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Tests (if you don't run them in Docker)
+tests/
+
+# Temporary files
+tmp/
+*.tmp
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
