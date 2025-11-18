@@ -17,7 +17,7 @@ where
         Opt(Option<String>),
         Str(String),
     }
-    
+
     match StringOrOption::deserialize(deserializer)? {
         StringOrOption::Opt(o) => Ok(o),
         StringOrOption::Str(s) => Ok(Some(s)),
@@ -39,12 +39,12 @@ mod duration_serde {
             Opt(Option<String>),
             Str(String),
         }
-        
+
         let s: Option<String> = match StringOrOption::deserialize(deserializer)? {
             StringOrOption::Opt(o) => o,
             StringOrOption::Str(s) => Some(s),
         };
-        
+
         match s {
             None => Ok(None),
             Some(s) => {
@@ -133,7 +133,7 @@ impl AppConfig {
     pub fn from_file<P: AsRef<Path>>(path: P) -> crate::Result<Self> {
         let path = path.as_ref();
         let contents = fs::read_to_string(path)?;
-        
+
         // Auto-detect format based on file extension
         if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
             match ext {
@@ -141,14 +141,12 @@ impl AppConfig {
                 "conf" | "hocon" => Self::from_hocon_str(&contents),
                 _ => {
                     // Try YAML first, then HOCON
-                    Self::from_yaml_str(&contents)
-                        .or_else(|_| Self::from_hocon_str(&contents))
+                    Self::from_yaml_str(&contents).or_else(|_| Self::from_hocon_str(&contents))
                 }
             }
         } else {
             // No extension, try both formats
-            Self::from_yaml_str(&contents)
-                .or_else(|_| Self::from_hocon_str(&contents))
+            Self::from_yaml_str(&contents).or_else(|_| Self::from_hocon_str(&contents))
         }
     }
 
