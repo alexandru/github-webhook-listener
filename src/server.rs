@@ -2,6 +2,7 @@ use crate::command::CommandTrigger;
 use crate::config::AppConfig;
 use crate::error::{AppError, Result};
 use crate::event::EventPayload;
+use askama::Template;
 use axum::{
     Router,
     body::Bytes,
@@ -13,10 +14,41 @@ use axum::{
 use std::sync::Arc;
 use tracing::{info, warn};
 
+#[derive(Template)]
+#[template(path = "projects.html")]
+struct ProjectsTemplate {
+    projects: Vec<String>,
+}
+
 #[derive(Clone)]
 pub struct AppState {
     pub config: AppConfig,
     pub command_trigger: Arc<CommandTrigger>,
+}
+
+fn routes(base_path: &str) -> Router<AppState> {
+    let mut router = Router::new();
+
+    // Redirect base path without trailing slash to base path with trailing slash
+    if !base_path.is_empty() {
+        let redirect_location = format!("{}/", base_path.trim_end_matches('/'));
+        router = router.route(
+            base_path,
+            get(move || async move {
+                (
+                    StatusCode::MOVED_PERMANENTLY,
+                    [("Location", redirect_location.clone())],
+                )
+                    .into_response()
+            }),
+        );
+    }
+
+    // Main routes
+    router = router.route(&format!("{}/", base_path), get(list_projects));
+    router = router.route(&format!("{}/{{project}}", base_path), post(handle_webhook));
+
+    router
 }
 
 pub async fn start_server(config: AppConfig) -> Result<()> {
@@ -27,17 +59,7 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
     };
 
     let base_path = config.http.base_path();
-
-    let mut app = Router::new();
-
-    // Add root GET handler
-    if !base_path.is_empty() {
-        app = app.route(&base_path, get(redirect_to_slash));
-    }
-    app = app.route(&format!("{}/", base_path), get(list_projects));
-    app = app.route(&format!("{}/{{project}}", base_path), post(handle_webhook));
-
-    let app = app.with_state(state);
+    let app = routes(&base_path).with_state(state);
 
     let addr = config.http.bind_address();
     info!("Starting server on {}", addr);
@@ -53,34 +75,15 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
     Ok(())
 }
 
-async fn redirect_to_slash() -> Response {
-    (StatusCode::MOVED_PERMANENTLY, [("Location", "/")]).into_response()
-}
-
 async fn list_projects(State(state): State<AppState>) -> Html<String> {
-    let project_names: Vec<String> = state.config.projects.keys().cloned().collect();
+    let projects: Vec<String> = state.config.projects.keys().cloned().collect();
 
-    let html = format!(
-        r#"<!DOCTYPE html>
-<html>
-<head>
-    <title>GitHub Webhook Listener</title>
-</head>
-<body>
-    <p>Configured hooks:</p>
-    <ul>
-{}
-    </ul>
-</body>
-</html>"#,
-        project_names
-            .iter()
-            .map(|name| format!("        <li>{}</li>", html_escape(name)))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-
-    Html(html)
+    let template = ProjectsTemplate { projects };
+    Html(
+        template
+            .render()
+            .unwrap_or_else(|_| "Error rendering template".to_string()),
+    )
 }
 
 async fn handle_webhook(
@@ -131,34 +134,17 @@ async fn handle_webhook(
     }
 
     // Execute the command
-    match state.command_trigger.trigger_command(&project_key).await {
-        Ok(_) => {
-            info!("POST /{} — OK", project_key);
-            Ok((StatusCode::OK, "OK").into_response())
-        }
-        Err(e) => {
-            warn!("POST /{} — Error: {}", project_key, e);
-            Err(e)
-        }
-    }
-}
+    state
+        .command_trigger
+        .trigger_command(&project_key)
+        .await
+        .inspect(|_| info!("POST /{} — OK", project_key))
+        .inspect_err(|e| warn!("POST /{} — Error: {}", project_key, e))?;
 
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#x27;")
+    Ok((StatusCode::OK, "OK").into_response())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn test_html_escape() {
-        assert_eq!(html_escape("test"), "test");
-        assert_eq!(html_escape("<script>"), "&lt;script&gt;");
-        assert_eq!(html_escape("a&b"), "a&amp;b");
-    }
+    // Note: html_escape test removed as escaping is now handled by Askama template engine
 }

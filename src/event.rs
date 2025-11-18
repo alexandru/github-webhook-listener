@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::Sha256;
 
+/// GitHub webhook event payload containing action and git ref information
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EventPayload {
     pub action: Option<String>,
@@ -26,7 +27,7 @@ impl EventPayload {
     /// Check if this payload should trigger the project
     pub fn should_process(&self, project: &ProjectConfig) -> bool {
         let action_matches = self.action.as_deref().unwrap_or("push") == project.action_filter();
-        let ref_matches = self.git_ref.as_deref() == Some(project.ref_name());
+        let ref_matches = self.git_ref.as_deref() == Some(&project.git_ref);
         action_matches && ref_matches
     }
 
@@ -40,11 +41,9 @@ impl EventPayload {
             .ok_or_else(|| AppError::Forbidden("No signature header was provided".to_string()))?;
 
         if let Some(sig) = signature.strip_prefix("sha256=") {
-            verify_hmac_sha256(body, secret, sig)?;
-            Ok(())
+            verify_hmac_sha256(body, secret, sig)
         } else if let Some(sig) = signature.strip_prefix("sha1=") {
-            verify_hmac_sha1(body, secret, sig)?;
-            Ok(())
+            verify_hmac_sha1(body, secret, sig)
         } else {
             Err(AppError::Forbidden(
                 "Unsupported signature algorithm".to_string(),
@@ -55,25 +54,24 @@ impl EventPayload {
 
 fn verify_hmac_sha256(body: &str, secret: &str, expected_hex: &str) -> Result<()> {
     type HmacSha256 = Hmac<Sha256>;
-
-    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
-        .map_err(|e| AppError::Internal(format!("Invalid secret key: {}", e)))?;
-
-    mac.update(body.as_bytes());
-
-    let expected = hex::decode(expected_hex)
-        .map_err(|_| AppError::Forbidden("Invalid signature format".to_string()))?;
-
-    mac.verify_slice(&expected)
-        .map_err(|_| AppError::Forbidden("Invalid checksum (sha256)".to_string()))?;
-
-    Ok(())
+    verify_hmac_with_algorithm::<HmacSha256>(body, secret, expected_hex, "sha256")
 }
 
 fn verify_hmac_sha1(body: &str, secret: &str, expected_hex: &str) -> Result<()> {
     type HmacSha1 = Hmac<Sha1>;
+    verify_hmac_with_algorithm::<HmacSha1>(body, secret, expected_hex, "sha1")
+}
 
-    let mut mac = HmacSha1::new_from_slice(secret.as_bytes())
+fn verify_hmac_with_algorithm<M>(
+    body: &str,
+    secret: &str,
+    expected_hex: &str,
+    algorithm: &str,
+) -> Result<()>
+where
+    M: Mac + hmac::digest::KeyInit,
+{
+    let mut mac = <M as Mac>::new_from_slice(secret.as_bytes())
         .map_err(|e| AppError::Internal(format!("Invalid secret key: {}", e)))?;
 
     mac.update(body.as_bytes());
@@ -82,7 +80,7 @@ fn verify_hmac_sha1(body: &str, secret: &str, expected_hex: &str) -> Result<()> 
         .map_err(|_| AppError::Forbidden("Invalid signature format".to_string()))?;
 
     mac.verify_slice(&expected)
-        .map_err(|_| AppError::Forbidden("Invalid checksum (sha1)".to_string()))?;
+        .map_err(|_| AppError::Forbidden(format!("Invalid checksum ({})", algorithm)))?;
 
     Ok(())
 }

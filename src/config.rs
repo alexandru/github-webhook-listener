@@ -4,28 +4,34 @@ use std::fs;
 use std::path::Path;
 use std::time::Duration;
 
+// Helper to deserialize values that can be either T or Option<T> (for hocon-rs compatibility)
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ValueOrOption<T> {
+    Value(T),
+    Opt(Option<T>),
+}
+
+impl<T> From<ValueOrOption<T>> for Option<T> {
+    fn from(value: ValueOrOption<T>) -> Self {
+        match value {
+            ValueOrOption::Value(v) => Some(v),
+            ValueOrOption::Opt(o) => o,
+        }
+    }
+}
+
 // Custom deserializer for Option<String> that works with hocon-rs
 fn option_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    // First try to deserialize as Option<String>
-    // If that fails, try to deserialize as String and wrap it
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum StringOrOption {
-        Opt(Option<String>),
-        Str(String),
-    }
-
-    match StringOrOption::deserialize(deserializer)? {
-        StringOrOption::Opt(o) => Ok(o),
-        StringOrOption::Str(s) => Ok(Some(s)),
-    }
+    Ok(ValueOrOption::<String>::deserialize(deserializer)?.into())
 }
 
 // Custom duration deserializer that supports both humantime and ISO 8601 formats
 mod duration_serde {
+    use super::ValueOrOption;
     use serde::{Deserialize, Deserializer};
     use std::time::Duration;
 
@@ -33,17 +39,7 @@ mod duration_serde {
     where
         D: Deserializer<'de>,
     {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum StringOrOption {
-            Opt(Option<String>),
-            Str(String),
-        }
-
-        let s: Option<String> = match StringOrOption::deserialize(deserializer)? {
-            StringOrOption::Opt(o) => o,
-            StringOrOption::Str(s) => Some(s),
-        };
+        let s: Option<String> = ValueOrOption::<String>::deserialize(deserializer)?.into();
 
         match s {
             None => Ok(None),
@@ -115,10 +111,6 @@ pub struct ProjectConfig {
 }
 
 impl ProjectConfig {
-    pub fn ref_name(&self) -> &str {
-        &self.git_ref
-    }
-
     pub fn action_filter(&self) -> &str {
         self.action.as_deref().unwrap_or("push")
     }
@@ -201,7 +193,7 @@ projects:
         assert_eq!(config.projects.len(), 1);
 
         let project = config.projects.get("myproject").unwrap();
-        assert_eq!(project.ref_name(), "refs/heads/gh-pages");
+        assert_eq!(project.git_ref, "refs/heads/gh-pages");
         assert_eq!(project.directory, "/tmp");
         assert_eq!(project.command, "touch ./i-was-here.txt");
         assert_eq!(project.secret, "xxxxxxxxxxxxxxxxxxxxxxxxxx");
@@ -258,7 +250,7 @@ projects {
         assert_eq!(config.projects.len(), 1);
 
         let project = config.projects.get("myproject").unwrap();
-        assert_eq!(project.ref_name(), "refs/heads/gh-pages");
+        assert_eq!(project.git_ref, "refs/heads/gh-pages");
         assert_eq!(project.directory, "/tmp");
         assert_eq!(project.command, "touch ./i-was-here.txt");
         assert_eq!(project.secret, "xxxxxxxxxxxxxxxxxxxxxxxxxx");
