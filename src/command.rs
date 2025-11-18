@@ -24,10 +24,12 @@ impl CommandResult {
     }
 }
 
+type SharedLock<T> = Arc<Mutex<T>>;
+
 /// Manages command execution with per-project locking to prevent concurrent runs
 pub struct CommandTrigger {
     projects: HashMap<String, ProjectConfig>,
-    locks: Arc<Mutex<HashMap<String, Arc<Mutex<()>>>>>,
+    locks: SharedLock<HashMap<String, SharedLock<()>>>,
 }
 
 impl CommandTrigger {
@@ -38,7 +40,7 @@ impl CommandTrigger {
         }
     }
 
-    async fn get_lock(&self, key: &str) -> Arc<Mutex<()>> {
+    async fn get_lock(&self, key: &str) -> SharedLock<()> {
         let mut locks = self.locks.lock().await;
         locks
             .entry(key.to_string())
@@ -54,13 +56,12 @@ impl CommandTrigger {
 
         let timeout_duration = project.timeout_duration();
         let lock = self.get_lock(key).await;
-        let _guard = lock.lock().await;
 
         info!("Executing command for project `{}`", key);
 
         let result = timeout(
             timeout_duration,
-            execute_shell_command(&project.command, &project.directory),
+            execute_shell_command_locked(lock, &project.command, &project.directory),
         )
         .await
         .map_err(|_| {
@@ -89,6 +90,15 @@ impl CommandTrigger {
             )))
         }
     }
+}
+
+async fn execute_shell_command_locked(
+    lock: SharedLock<()>,
+    command: &str,
+    directory: &str,
+) -> Result<CommandResult> {
+    let _guard = lock.lock().await;
+    execute_shell_command(command, directory).await
 }
 
 async fn execute_shell_command(command: &str, directory: &str) -> Result<CommandResult> {
