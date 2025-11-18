@@ -3,12 +3,12 @@ use crate::config::AppConfig;
 use crate::error::{AppError, Result};
 use crate::event::EventPayload;
 use axum::{
+    Router,
     body::Bytes,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
-    Router,
 };
 use std::sync::Arc;
 use tracing::{info, warn};
@@ -35,7 +35,7 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
         app = app.route(&base_path, get(redirect_to_slash));
     }
     app = app.route(&format!("{}/", base_path), get(list_projects));
-    app = app.route(&format!("{}/:project", base_path), post(handle_webhook));
+    app = app.route(&format!("{}/{{project}}", base_path), post(handle_webhook));
 
     let app = app.with_state(state);
 
