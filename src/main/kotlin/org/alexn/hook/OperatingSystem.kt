@@ -103,7 +103,8 @@ suspend fun executeRawShellCommand(
     )
 
 val USER_HOME: File? by lazy {
-    Option.fromNullable(System.getProperty("user.home"))
+    Option
+        .fromNullable(System.getProperty("user.home"))
         .filter { it.isNotEmpty() }
         .recover { Option.fromNullable(System.getenv("HOME")).bind() }
         .filter { it.isNotEmpty() }

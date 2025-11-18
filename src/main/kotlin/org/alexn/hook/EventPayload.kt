@@ -102,7 +102,9 @@ data class EventPayload(
     }
 }
 
-sealed class RequestError(val httpCode: Int) {
+sealed class RequestError(
+    val httpCode: Int,
+) {
     abstract val message: String
 
     fun toException(): Exception =
@@ -142,13 +144,21 @@ sealed class RequestError(val httpCode: Int) {
             500,
         )
 
-    data class NotFound(override val message: String) : RequestError(404)
+    data class NotFound(
+        override val message: String,
+    ) : RequestError(404)
 
-    data class Skipped(override val message: String) : RequestError(200)
+    data class Skipped(
+        override val message: String,
+    ) : RequestError(200)
 
-    data class TimedOut(override val message: String) : RequestError(408)
+    data class TimedOut(
+        override val message: String,
+    ) : RequestError(408)
 
-    data class UnsupportedMediaType(override val message: String) : RequestError(415)
+    data class UnsupportedMediaType(
+        override val message: String,
+    ) : RequestError(415)
 }
 
 class RequestException(

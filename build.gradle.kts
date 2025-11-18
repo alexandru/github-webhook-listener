@@ -90,19 +90,17 @@ dependencies {
 //     jvmToolchain(22)
 // }
 
-// java {
-//     toolchain {
-//         languageVersion.set(JavaLanguageVersion.of(22))
-//     }
-// }
-
 tasks {
-    // withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    //     compilerOptions {
-    //         jvmTarget.set(JvmTarget.JVM_22)
-    //         javaParameters = true
-    //     }
-    // }
+    withType<JavaCompile>().configureEach {
+        options.release.set(21)
+    }
+
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+            javaParameters.set(true)
+        }
+    }
 
     named<DependencyUpdatesTask>("dependencyUpdates").configure {
         fun isNonStable(version: String): Boolean {

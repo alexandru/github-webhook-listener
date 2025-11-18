@@ -52,21 +52,23 @@ class CommandTrigger private constructor(
             if (result.isSuccessful) {
                 Unit.right()
             } else {
-                RequestError.Internal(
-                    "Command execution failed",
-                    null,
-                    meta =
-                        mapOf(
-                            "exit-code" to result.exitCode.toString(),
-                            "stdout" to result.stdout,
-                            "stderr" to result.stderr,
-                        ),
-                ).left()
+                RequestError
+                    .Internal(
+                        "Command execution failed",
+                        null,
+                        meta =
+                            mapOf(
+                                "exit-code" to result.exitCode.toString(),
+                                "stdout" to result.stdout,
+                                "stderr" to result.stderr,
+                            ),
+                    ).left()
             }
         } catch (e: TimeoutCancellationException) {
-            RequestError.TimedOut(
-                "Command execution timed-out after $timeoutDuration",
-            ).left()
+            RequestError
+                .TimedOut(
+                    "Command execution timed-out after $timeoutDuration",
+                ).left()
         } finally {
             mutex.unlock()
         }

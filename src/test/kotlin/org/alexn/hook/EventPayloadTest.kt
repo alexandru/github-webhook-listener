@@ -28,8 +28,7 @@ class EventPayloadTest {
                 json,
                 key,
                 "sha1=" + HmacUtils(HmacAlgorithms.HMAC_SHA_1, key).hmacHex(json),
-            )
-            .getOrElse { throw it.toException() }
+            ).getOrElse { throw it.toException() }
     }
 
     @Test
@@ -49,8 +48,7 @@ class EventPayloadTest {
                 json,
                 key,
                 "sha256=" + HmacUtils(HmacAlgorithms.HMAC_SHA_256, key).hmacHex(json),
-            )
-            .getOrElse { throw it.toException() }
+            ).getOrElse { throw it.toException() }
     }
 
     @Test

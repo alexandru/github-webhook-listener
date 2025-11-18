@@ -93,15 +93,16 @@ class ApplicationTest {
     fun `trigger with sha256 authentication`() =
         testApplication {
             withInitializedApp { sample ->
-                client.post("/monix") {
-                    contentType(ContentType.Application.Json)
-                    headers {
-                        append("X-Hub-Signature-256", sample.hmacSha256)
+                client
+                    .post("/monix") {
+                        contentType(ContentType.Application.Json)
+                        headers {
+                            append("X-Hub-Signature-256", sample.hmacSha256)
+                        }
+                        setBody(sample.json)
+                    }.apply {
+                        assertEquals(HttpStatusCode.OK, status)
                     }
-                    setBody(sample.json)
-                }.apply {
-                    assertEquals(HttpStatusCode.OK, status)
-                }
                 assert(sample.createdFile.exists()) {
                     "File should exist: `${sample.createdFile.absolutePath}`"
                 }
@@ -112,15 +113,16 @@ class ApplicationTest {
     fun `trigger with sha1 authentication`() =
         testApplication {
             withInitializedApp { sample ->
-                client.post("/monix") {
-                    contentType(ContentType.Application.Json)
-                    headers {
-                        append("X-Hub-Signature", sample.hmacSha1)
+                client
+                    .post("/monix") {
+                        contentType(ContentType.Application.Json)
+                        headers {
+                            append("X-Hub-Signature", sample.hmacSha1)
+                        }
+                        setBody(sample.json)
+                    }.apply {
+                        assertEquals(HttpStatusCode.OK, status)
                     }
-                    setBody(sample.json)
-                }.apply {
-                    assertEquals(HttpStatusCode.OK, status)
-                }
                 assert(sample.createdFile.exists()) {
                     "File should exist: `${sample.createdFile.absolutePath}`"
                 }
@@ -131,12 +133,13 @@ class ApplicationTest {
     fun `reject unauthenticated payload`() =
         testApplication {
             withInitializedApp { sample ->
-                client.post("/monix") {
-                    contentType(ContentType.Application.Json)
-                    setBody(sample.json)
-                }.apply {
-                    assertEquals(HttpStatusCode.Forbidden, status)
-                }
+                client
+                    .post("/monix") {
+                        contentType(ContentType.Application.Json)
+                        setBody(sample.json)
+                    }.apply {
+                        assertEquals(HttpStatusCode.Forbidden, status)
+                    }
             }
         }
 
@@ -144,15 +147,16 @@ class ApplicationTest {
     fun `reject unsupported algorithm`() =
         testApplication {
             withInitializedApp { sample ->
-                client.post("/monix") {
-                    contentType(ContentType.Application.Json)
-                    headers {
-                        append("X-Hub-Signature", sample.hmacSha512)
+                client
+                    .post("/monix") {
+                        contentType(ContentType.Application.Json)
+                        headers {
+                            append("X-Hub-Signature", sample.hmacSha512)
+                        }
+                        setBody(sample.json)
+                    }.apply {
+                        assertEquals(HttpStatusCode.Forbidden, status)
                     }
-                    setBody(sample.json)
-                }.apply {
-                    assertEquals(HttpStatusCode.Forbidden, status)
-                }
             }
         }
 
@@ -160,15 +164,16 @@ class ApplicationTest {
     fun `project must exist`() =
         testApplication {
             withInitializedApp { sample ->
-                client.post("/notavailable") {
-                    contentType(ContentType.Application.Json)
-                    headers {
-                        append("X-Hub-Signature", sample.hmacSha1)
+                client
+                    .post("/notavailable") {
+                        contentType(ContentType.Application.Json)
+                        headers {
+                            append("X-Hub-Signature", sample.hmacSha1)
+                        }
+                        setBody(sample.json)
+                    }.apply {
+                        assertEquals(HttpStatusCode.NotFound, status)
                     }
-                    setBody(sample.json)
-                }.apply {
-                    assertEquals(HttpStatusCode.NotFound, status)
-                }
             }
         }
 }
