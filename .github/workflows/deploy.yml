@@ -3,8 +3,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy_docker:
+  build_matrix:
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
     steps:
       - uses: actions/checkout@v4
 
@@ -18,8 +21,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Docker images
+      - name: Set platform tag
+        id: platform
+        run: echo "tag=$(echo ${{ matrix.platform }} | tr '/' '-')" >> $GITHUB_OUTPUT
+
+      - name: Build and Push Docker image for ${{ matrix.platform }}
         run: |
-          make push-docker
+          make push-docker-platform PLATFORM=${{ matrix.platform }}
+        env:
+          GIT_TAG: ${{ github.ref }}
+
+  create_manifest:
+    needs: build_matrix
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and Push multi-platform manifest
+        run: |
+          make push-manifest
         env:
           GIT_TAG: ${{ github.ref }}
