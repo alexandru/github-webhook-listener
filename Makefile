@@ -2,6 +2,7 @@ NAME          := ghcr.io/alexandru/github-webhook-listener
 TAG           := $$(./scripts/new-version.sh)
 IMG           := ${NAME}:${TAG}
 LATEST        := ${NAME}:latest
+PLATFORM      ?= linux/amd64,linux/arm64
 
 test:
 	cargo test
@@ -18,6 +19,20 @@ build-docker: init-docker
 
 push-docker:
 	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-docker
+
+# Build and push for a single platform (used in matrix builds)
+build-docker-platform: init-docker
+	$(eval PLATFORM_TAG := $(shell echo ${PLATFORM} | tr '/' '-'))
+	docker buildx build --platform ${PLATFORM} -f ./Dockerfile -t "${IMG}-${PLATFORM_TAG}" ${DOCKER_EXTRA_ARGS} .
+
+push-docker-platform:
+	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-docker-platform
+
+# Create and push multi-platform manifest combining platform-specific images
+push-manifest:
+	docker buildx imagetools create -t "${IMG}" -t "${LATEST}" \
+		"${IMG}-linux-amd64" \
+		"${IMG}-linux-arm64"
 
 build-docker-local:
 	docker build -f ./Dockerfile -t "${IMG}" -t "${LATEST}" .
