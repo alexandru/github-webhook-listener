@@ -10,31 +10,31 @@ pub type Result<T> = std::result::Result<T, AppError>;
 pub enum AppError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("YAML parse error: {0}")]
     Yaml(#[from] serde_yaml::Error),
-    
+
     #[error("JSON parse error: {0}")]
     Json(#[from] serde_json::Error),
-    
+
     #[error("URL-encoded parse error: {0}")]
     UrlEncoded(#[from] serde_urlencoded::de::Error),
-    
+
     #[error("Bad request: {0}")]
     BadRequest(String),
-    
+
     #[error("Forbidden: {0}")]
     Forbidden(String),
-    
+
     #[error("Not found: {0}")]
     NotFound(String),
-    
+
     #[error("Internal error: {0}")]
     Internal(String),
-    
+
     #[error("Timeout: {0}")]
     Timeout(String),
-    
+
     #[error("Unsupported media type: {0}")]
     UnsupportedMediaType(String),
 }

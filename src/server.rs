@@ -26,6 +26,31 @@ pub struct AppState {
     pub command_trigger: Arc<CommandTrigger>,
 }
 
+fn routes(base_path: &str) -> Router<AppState> {
+    let mut router = Router::new();
+
+    // Redirect base path without trailing slash to base path with trailing slash
+    if !base_path.is_empty() {
+        let redirect_location = format!("{}/", base_path.trim_end_matches('/'));
+        router = router.route(
+            base_path,
+            get(move || async move {
+                (
+                    StatusCode::MOVED_PERMANENTLY,
+                    [("Location", redirect_location.clone())],
+                )
+                    .into_response()
+            }),
+        );
+    }
+
+    // Main routes
+    router = router.route(&format!("{}/", base_path), get(list_projects));
+    router = router.route(&format!("{}/{{project}}", base_path), post(handle_webhook));
+
+    router
+}
+
 pub async fn start_server(config: AppConfig) -> Result<()> {
     let command_trigger = Arc::new(CommandTrigger::new(config.projects.clone()));
     let state = AppState {
@@ -34,17 +59,7 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
     };
 
     let base_path = config.http.base_path();
-
-    let mut app = Router::new();
-
-    // Add root GET handler
-    if !base_path.is_empty() {
-        app = app.route(&base_path, get(redirect_to_slash));
-    }
-    app = app.route(&format!("{}/", base_path), get(list_projects));
-    app = app.route(&format!("{}/{{project}}", base_path), post(handle_webhook));
-
-    let app = app.with_state(state);
+    let app = routes(&base_path).with_state(state);
 
     let addr = config.http.bind_address();
     info!("Starting server on {}", addr);
@@ -60,15 +75,15 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
     Ok(())
 }
 
-async fn redirect_to_slash() -> Response {
-    (StatusCode::MOVED_PERMANENTLY, [("Location", "/")]).into_response()
-}
-
 async fn list_projects(State(state): State<AppState>) -> Html<String> {
     let projects: Vec<String> = state.config.projects.keys().cloned().collect();
-    
+
     let template = ProjectsTemplate { projects };
-    Html(template.render().unwrap_or_else(|_| "Error rendering template".to_string()))
+    Html(
+        template
+            .render()
+            .unwrap_or_else(|_| "Error rendering template".to_string()),
+    )
 }
 
 async fn handle_webhook(
@@ -125,7 +140,7 @@ async fn handle_webhook(
         .await
         .inspect(|_| info!("POST /{} — OK", project_key))
         .inspect_err(|e| warn!("POST /{} — Error: {}", project_key, e))?;
-    
+
     Ok((StatusCode::OK, "OK").into_response())
 }
 
