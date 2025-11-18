@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub Webhook Listener</title>
+</head>
+<body>
+    <p>Configured hooks:</p>
+    <ul>
+        {% for project in projects %}
+        <li>{{ project }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

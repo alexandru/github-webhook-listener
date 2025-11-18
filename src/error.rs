@@ -2,65 +2,41 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use std::fmt;
+use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, AppError>;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum AppError {
-    Io(std::io::Error),
-    Yaml(serde_yaml::Error),
-    Json(serde_json::Error),
-    UrlEncoded(serde_urlencoded::de::Error),
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+    
+    #[error("YAML parse error: {0}")]
+    Yaml(#[from] serde_yaml::Error),
+    
+    #[error("JSON parse error: {0}")]
+    Json(#[from] serde_json::Error),
+    
+    #[error("URL-encoded parse error: {0}")]
+    UrlEncoded(#[from] serde_urlencoded::de::Error),
+    
+    #[error("Bad request: {0}")]
     BadRequest(String),
+    
+    #[error("Forbidden: {0}")]
     Forbidden(String),
+    
+    #[error("Not found: {0}")]
     NotFound(String),
+    
+    #[error("Internal error: {0}")]
     Internal(String),
+    
+    #[error("Timeout: {0}")]
     Timeout(String),
+    
+    #[error("Unsupported media type: {0}")]
     UnsupportedMediaType(String),
-}
-
-impl fmt::Display for AppError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AppError::Io(e) => write!(f, "IO error: {}", e),
-            AppError::Yaml(e) => write!(f, "YAML parse error: {}", e),
-            AppError::Json(e) => write!(f, "JSON parse error: {}", e),
-            AppError::UrlEncoded(e) => write!(f, "URL-encoded parse error: {}", e),
-            AppError::BadRequest(msg) => write!(f, "Bad request: {}", msg),
-            AppError::Forbidden(msg) => write!(f, "Forbidden: {}", msg),
-            AppError::NotFound(msg) => write!(f, "Not found: {}", msg),
-            AppError::Internal(msg) => write!(f, "Internal error: {}", msg),
-            AppError::Timeout(msg) => write!(f, "Timeout: {}", msg),
-            AppError::UnsupportedMediaType(msg) => write!(f, "Unsupported media type: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for AppError {}
-
-impl From<std::io::Error> for AppError {
-    fn from(err: std::io::Error) -> Self {
-        AppError::Io(err)
-    }
-}
-
-impl From<serde_yaml::Error> for AppError {
-    fn from(err: serde_yaml::Error) -> Self {
-        AppError::Yaml(err)
-    }
-}
-
-impl From<serde_json::Error> for AppError {
-    fn from(err: serde_json::Error) -> Self {
-        AppError::Json(err)
-    }
-}
-
-impl From<serde_urlencoded::de::Error> for AppError {
-    fn from(err: serde_urlencoded::de::Error) -> Self {
-        AppError::UrlEncoded(err)
-    }
 }
 
 impl IntoResponse for AppError {

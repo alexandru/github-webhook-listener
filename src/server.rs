@@ -2,6 +2,7 @@ use crate::command::CommandTrigger;
 use crate::config::AppConfig;
 use crate::error::{AppError, Result};
 use crate::event::EventPayload;
+use askama::Template;
 use axum::{
     Router,
     body::Bytes,
@@ -12,6 +13,12 @@ use axum::{
 };
 use std::sync::Arc;
 use tracing::{info, warn};
+
+#[derive(Template)]
+#[template(path = "projects.html")]
+struct ProjectsTemplate {
+    projects: Vec<String>,
+}
 
 #[derive(Clone)]
 pub struct AppState {
@@ -58,29 +65,10 @@ async fn redirect_to_slash() -> Response {
 }
 
 async fn list_projects(State(state): State<AppState>) -> Html<String> {
-    let project_names: Vec<String> = state.config.projects.keys().cloned().collect();
-
-    let html = format!(
-        r#"<!DOCTYPE html>
-<html>
-<head>
-    <title>GitHub Webhook Listener</title>
-</head>
-<body>
-    <p>Configured hooks:</p>
-    <ul>
-{}
-    </ul>
-</body>
-</html>"#,
-        project_names
-            .iter()
-            .map(|name| format!("        <li>{}</li>", html_escape(name)))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-
-    Html(html)
+    let projects: Vec<String> = state.config.projects.keys().cloned().collect();
+    
+    let template = ProjectsTemplate { projects };
+    Html(template.render().unwrap_or_else(|_| "Error rendering template".to_string()))
 }
 
 async fn handle_webhook(
@@ -143,22 +131,7 @@ async fn handle_webhook(
     }
 }
 
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#x27;")
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn test_html_escape() {
-        assert_eq!(html_escape("test"), "test");
-        assert_eq!(html_escape("<script>"), "&lt;script&gt;");
-        assert_eq!(html_escape("a&b"), "a&amp;b");
-    }
+    // Note: html_escape test removed as escaping is now handled by Askama template engine
 }

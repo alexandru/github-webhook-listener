@@ -115,10 +115,6 @@ pub struct ProjectConfig {
 }
 
 impl ProjectConfig {
-    pub fn ref_name(&self) -> &str {
-        &self.git_ref
-    }
-
     pub fn action_filter(&self) -> &str {
         self.action.as_deref().unwrap_or("push")
     }
@@ -201,7 +197,7 @@ projects:
         assert_eq!(config.projects.len(), 1);
 
         let project = config.projects.get("myproject").unwrap();
-        assert_eq!(project.ref_name(), "refs/heads/gh-pages");
+        assert_eq!(project.git_ref, "refs/heads/gh-pages");
         assert_eq!(project.directory, "/tmp");
         assert_eq!(project.command, "touch ./i-was-here.txt");
         assert_eq!(project.secret, "xxxxxxxxxxxxxxxxxxxxxxxxxx");
@@ -258,7 +254,7 @@ projects {
         assert_eq!(config.projects.len(), 1);
 
         let project = config.projects.get("myproject").unwrap();
-        assert_eq!(project.ref_name(), "refs/heads/gh-pages");
+        assert_eq!(project.git_ref, "refs/heads/gh-pages");
         assert_eq!(project.directory, "/tmp");
         assert_eq!(project.command, "touch ./i-was-here.txt");
         assert_eq!(project.secret, "xxxxxxxxxxxxxxxxxxxxxxxxxx");
