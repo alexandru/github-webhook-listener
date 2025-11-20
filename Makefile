@@ -2,9 +2,9 @@ NAME          := ghcr.io/alexandru/github-webhook-listener
 TAG           := $$(./scripts/new-version.sh)
 IMG_JVM       := ${NAME}:jvm-${TAG}
 IMG_NATIVE    := ${NAME}:native-${TAG}
-LATEST_JVM    := ${NAME}:jvm-latest
-LATEST_NATIVE := ${NAME}:native-latest
-LATEST        := ${NAME}:latest
+LATEST_JVM    := ${NAME}:jvm-v2
+LATEST_NATIVE := ${NAME}:native-v2
+LATEST        := ${NAME}:v2
 PLATFORM      ?= linux/amd64,linux/arm64
 
 dependency-updates:
