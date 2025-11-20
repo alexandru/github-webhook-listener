@@ -3,11 +3,11 @@
 package org.alexn.hook
 
 import arrow.core.getOrElse
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.Json
 
 class AppConfigTest {
     val expected =
@@ -85,7 +85,8 @@ class AppConfigTest {
 
     @Test
     fun parseHoconConfig() {
-        val config = """
+        val config =
+            """
             http {
                 path = "/"
                 port = 8080
@@ -104,7 +105,7 @@ class AppConfigTest {
                     secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         assertEquals(
             AppConfig(
@@ -133,64 +134,76 @@ class AppConfigTest {
 
     @Test
     fun parseFileYamlAndHocon() {
-        val yamlConfig = """
-        http:
-            path: "/"
-            port: 8080
+        val yamlConfig =
+            """
+            http:
+                path: "/"
+                port: 8080
 
-        runtime:
-            workers: 2
-            output: stdout
+            runtime:
+                workers: 2
+                output: stdout
 
-        projects:
-            myproject:
-                ref: "refs/heads/gh-pages"
-                directory: "/var/www/myproject"
-                command: "git pull"
-                secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
-    """.trimIndent()
+            projects:
+                myproject:
+                    ref: "refs/heads/gh-pages"
+                    directory: "/var/www/myproject"
+                    command: "git pull"
+                    secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+            """.trimIndent()
 
-        val hoconConfig = """
-        http {
-            path = "/"
-            port = 8080
-        }
-
-        runtime {
-            workers = 2
-            output = "stdout"
-        }
-
-        projects {
-            myproject {
-                ref = "refs/heads/gh-pages"
-                directory = "/var/www/myproject"
-                command = "git pull"
-                secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+        val hoconConfig =
+            """
+            http {
+                path = "/"
+                port = 8080
             }
-        }
-    """.trimIndent()
 
-        val expectedConfig = AppConfig(
-            http = AppConfig.Http(
-                host = null,
-                port = 8080,
-                path = "/",
-            ),
-            projects = mapOf(
-                "myproject" to AppConfig.Project(
-                    action = null,
-                    ref = "refs/heads/gh-pages",
-                    directory = "/var/www/myproject",
-                    command = "git pull",
-                    timeout = null,
-                    secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx",
-                ),
-            ),
-        )
+            runtime {
+                workers = 2
+                output = "stdout"
+            }
 
-        val yamlFile = kotlin.io.path.createTempFile(suffix = ".yaml").toFile()
-        val hoconFile = kotlin.io.path.createTempFile(suffix = ".conf").toFile()
+            projects {
+                myproject {
+                    ref = "refs/heads/gh-pages"
+                    directory = "/var/www/myproject"
+                    command = "git pull"
+                    secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+                }
+            }
+            """.trimIndent()
+
+        val expectedConfig =
+            AppConfig(
+                http =
+                    AppConfig.Http(
+                        host = null,
+                        port = 8080,
+                        path = "/",
+                    ),
+                projects =
+                    mapOf(
+                        "myproject" to
+                            AppConfig.Project(
+                                action = null,
+                                ref = "refs/heads/gh-pages",
+                                directory = "/var/www/myproject",
+                                command = "git pull",
+                                timeout = null,
+                                secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+                            ),
+                    ),
+            )
+
+        val yamlFile =
+            kotlin.io.path
+                .createTempFile(suffix = ".yaml")
+                .toFile()
+        val hoconFile =
+            kotlin.io.path
+                .createTempFile(suffix = ".conf")
+                .toFile()
         try {
             yamlFile.writeText(yamlConfig)
             hoconFile.writeText(hoconConfig)

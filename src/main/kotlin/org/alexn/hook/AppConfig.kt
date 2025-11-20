@@ -6,12 +6,12 @@ import arrow.core.Either
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
 import com.typesafe.config.ConfigFactory
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.hocon.Hocon
+import kotlinx.serialization.hocon.decodeFromConfig
 import java.io.File
 import kotlin.time.Duration
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.hocon.decodeFromConfig
 
 @Serializable
 data class AppConfig(
@@ -47,19 +47,21 @@ data class AppConfig(
             when (file.extension.lowercase()) {
                 "hocon", "conf" -> parseHocon(file)
                 "yaml", "yml" -> parseYaml(file)
-                else -> Either.Left(
-                    ConfigException(
-                        "Unsupported configuration file format: ${file.extension}",
-                    ),
-                )
+                else ->
+                    Either.Left(
+                        ConfigException(
+                            "Unsupported configuration file format: ${file.extension}",
+                        ),
+                    )
             }
 
         fun parseHocon(string: String): Either<ConfigException, AppConfig> =
             try {
-                val r = Hocon.decodeFromConfig(
-                    serializer(),
-                    ConfigFactory.parseString(string).resolve()
-                )
+                val r =
+                    Hocon.decodeFromConfig(
+                        serializer(),
+                        ConfigFactory.parseString(string).resolve(),
+                    )
                 Either.Right(r)
             } catch (ex: Exception) {
                 Either.Left(
@@ -85,15 +87,19 @@ data class AppConfig(
 
         fun parseYaml(string: String): Either<ConfigException, AppConfig> =
             try {
-                Either.Right(yamlParser.decodeFromString(
-                    serializer(),
-                    string,
-                ));
+                Either.Right(
+                    yamlParser.decodeFromString(
+                        serializer(),
+                        string,
+                    ),
+                )
             } catch (ex: Exception) {
-                Either.Left(ConfigException(
-                    "Failed to parse YAML configuration",
-                    ex,
-                ))
+                Either.Left(
+                    ConfigException(
+                        "Failed to parse YAML configuration",
+                        ex,
+                    ),
+                )
             }
 
         fun parseYaml(file: File): Either<ConfigException, AppConfig> =
@@ -118,3 +124,12 @@ data class AppConfig(
             )
     }
 }
+
+/**
+ * Exception thrown when there is a configuration error,
+ * see [AppConfig].
+ */
+class ConfigException(
+    message: String,
+    cause: Throwable? = null,
+) : Exception(message, cause)
