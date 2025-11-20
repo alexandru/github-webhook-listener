@@ -16,6 +16,7 @@ than 10 MB of RAM, so it can be installed on under-powered servers.
 > **NOTE**
 > 
 > This used to be a Haskell project, that I switched to Kotlin. The code is still available on the [v1-haskell](https://github.com/alexandru/github-webhook-listener/tree/v1-haskell) branch. 
+> There's also an experimental Rust branch, see [v3-rust](https://github.com/alexandru/github-webhook-listener/tree/v3-rust).
 
 ## Setup
 

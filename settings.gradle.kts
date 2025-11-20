@@ -38,6 +38,8 @@ dependencyResolutionManagement {
                 .versionRef("kotlin")
             library("kotlinx-serialization-json", "org.jetbrains.kotlinx", "kotlinx-serialization-json")
                 .versionRef("serialization")
+            library("kotlinx-serialization-hocon", "org.jetbrains.kotlinx", "kotlinx-serialization-hocon")
+                .versionRef("serialization")
 
             // https://ktor.io/
             plugin("ktor", "io.ktor.plugin")
