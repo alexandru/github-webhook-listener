@@ -5,6 +5,7 @@ IMG_NATIVE    := ${NAME}:native-${TAG}
 LATEST_JVM    := ${NAME}:jvm-latest
 LATEST_NATIVE := ${NAME}:native-latest
 LATEST        := ${NAME}:latest
+PLATFORM      ?= linux/amd64,linux/arm64
 
 dependency-updates:
 	./gradlew dependencyUpdates \
@@ -23,6 +24,20 @@ build-jvm: init-docker
 push-jvm:
 	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-jvm
 
+# Build and push for a single platform (used in matrix builds)
+build-jvm-platform: init-docker
+	$(eval PLATFORM_TAG := $(shell echo ${PLATFORM} | tr '/' '-'))
+	docker buildx build --platform ${PLATFORM} -f ./src/main/docker/Dockerfile.jvm -t "${IMG_JVM}-${PLATFORM_TAG}" -t "${LATEST_JVM}-${PLATFORM_TAG}" ${DOCKER_EXTRA_ARGS} .
+
+push-jvm-platform:
+	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-jvm-platform
+
+# Create and push multi-platform manifest combining platform-specific images
+push-jvm-manifest:
+	docker buildx imagetools create -t "${IMG_JVM}" -t "${LATEST_JVM}" \
+		"${IMG_JVM}-linux-amd64" \
+		"${IMG_JVM}-linux-arm64"
+
 build-jvm-local:
 	docker build -f ./src/main/docker/Dockerfile.jvm -t "${IMG_JVM}" -t "${LATEST_JVM}" .
 
@@ -34,6 +49,20 @@ build-native: init-docker
 
 push-native:
 	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-native
+
+# Build and push for a single platform (used in matrix builds)
+build-native-platform: init-docker
+	$(eval PLATFORM_TAG := $(shell echo ${PLATFORM} | tr '/' '-'))
+	docker buildx build --platform ${PLATFORM} -f ./src/main/docker/Dockerfile.native -t "${IMG_NATIVE}-${PLATFORM_TAG}" -t "${LATEST_NATIVE}-${PLATFORM_TAG}" -t "${LATEST}-${PLATFORM_TAG}" ${DOCKER_EXTRA_ARGS} .
+
+push-native-platform:
+	DOCKER_EXTRA_ARGS="--push" $(MAKE) build-native-platform
+
+# Create and push multi-platform manifest combining platform-specific images
+push-native-manifest:
+	docker buildx imagetools create -t "${IMG_NATIVE}" -t "${LATEST_NATIVE}" -t "${LATEST}" \
+		"${IMG_NATIVE}-linux-amd64" \
+		"${IMG_NATIVE}-linux-arm64"
 
 build-native-local:
 	docker build -f ./src/main/docker/Dockerfile.native -t "${IMG_NATIVE}" -t "${LATEST_NATIVE}" -t "${LATEST}" .
