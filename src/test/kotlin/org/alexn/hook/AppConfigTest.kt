@@ -2,13 +2,12 @@
 
 package org.alexn.hook
 
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import arrow.core.getOrElse
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
 
 class AppConfigTest {
     val expected =
@@ -44,19 +43,19 @@ class AppConfigTest {
         val config =
             """
             http:
-              path: "/"
-              port: 8080
+                path: "/"
+                port: 8080
 
             runtime:
-              workers: 2
-              output: stdout
+                workers: 2
+                output: stdout
 
             projects:
-              myproject:
-                ref: "refs/heads/gh-pages"
-                directory: "/var/www/myproject"
-                command: "git pull"
-                secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+                myproject:
+                    ref: "refs/heads/gh-pages"
+                    directory: "/var/www/myproject"
+                    command: "git pull"
+                    secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
             """.trimIndent()
 
         assertEquals(
@@ -80,7 +79,130 @@ class AppConfigTest {
                             ),
                     ),
             ),
-            AppConfig.parseYaml(config),
+            AppConfig.parseYaml(config).getOrElse { throw it },
         )
+    }
+
+    @Test
+    fun parseHoconConfig() {
+        val config = """
+            http {
+                path = "/"
+                port = 8080
+            }
+
+            runtime {
+                workers = 2
+                output = "stdout"
+            }
+
+            projects {
+                myproject {
+                    ref = "refs/heads/gh-pages"
+                    directory = "/var/www/myproject"
+                    command = "git pull"
+                    secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+                }
+            }
+        """.trimIndent()
+
+        assertEquals(
+            AppConfig(
+                http =
+                    AppConfig.Http(
+                        host = null,
+                        port = 8080,
+                        path = "/",
+                    ),
+                projects =
+                    mapOf(
+                        "myproject" to
+                            AppConfig.Project(
+                                action = null,
+                                ref = "refs/heads/gh-pages",
+                                directory = "/var/www/myproject",
+                                command = "git pull",
+                                timeout = null,
+                                secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+                            ),
+                    ),
+            ),
+            AppConfig.parseHocon(config).getOrElse { throw it },
+        )
+    }
+
+    @Test
+    fun parseFileYamlAndHocon() {
+        val yamlConfig = """
+        http:
+            path: "/"
+            port: 8080
+
+        runtime:
+            workers: 2
+            output: stdout
+
+        projects:
+            myproject:
+                ref: "refs/heads/gh-pages"
+                directory: "/var/www/myproject"
+                command: "git pull"
+                secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+    """.trimIndent()
+
+        val hoconConfig = """
+        http {
+            path = "/"
+            port = 8080
+        }
+
+        runtime {
+            workers = 2
+            output = "stdout"
+        }
+
+        projects {
+            myproject {
+                ref = "refs/heads/gh-pages"
+                directory = "/var/www/myproject"
+                command = "git pull"
+                secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+            }
+        }
+    """.trimIndent()
+
+        val expectedConfig = AppConfig(
+            http = AppConfig.Http(
+                host = null,
+                port = 8080,
+                path = "/",
+            ),
+            projects = mapOf(
+                "myproject" to AppConfig.Project(
+                    action = null,
+                    ref = "refs/heads/gh-pages",
+                    directory = "/var/www/myproject",
+                    command = "git pull",
+                    timeout = null,
+                    secret = "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+                ),
+            ),
+        )
+
+        val yamlFile = kotlin.io.path.createTempFile(suffix = ".yaml").toFile()
+        val hoconFile = kotlin.io.path.createTempFile(suffix = ".conf").toFile()
+        try {
+            yamlFile.writeText(yamlConfig)
+            hoconFile.writeText(hoconConfig)
+
+            val parsedYaml = AppConfig.parseFile(yamlFile).getOrElse { throw it }
+            val parsedHocon = AppConfig.parseFile(hoconFile).getOrElse { throw it }
+
+            assertEquals(expectedConfig, parsedYaml)
+            assertEquals(expectedConfig, parsedHocon)
+        } finally {
+            yamlFile.delete()
+            hoconFile.delete()
+        }
     }
 }

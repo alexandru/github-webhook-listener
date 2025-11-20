@@ -1,6 +1,7 @@
 package org.alexn.hook
 
 import arrow.continuations.SuspendApp
+import arrow.core.getOrElse
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.main
@@ -17,8 +18,8 @@ class RunServer :
 
     override fun run() =
         SuspendApp {
-            val config = AppConfig.parseYaml(File(configPath))
-            startServer(config)
+            val config = AppConfig.parseFile(File(configPath))
+            startServer(config.getOrElse { throw it })
         }
 }
 

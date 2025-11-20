@@ -78,6 +78,7 @@ dependencies {
     implementation(libs.kotlin.stdlib.jdk8)
     implementation(libs.kotlin.test.junit)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.serialization.hocon)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cio)
     implementation(libs.ktor.server.core)
