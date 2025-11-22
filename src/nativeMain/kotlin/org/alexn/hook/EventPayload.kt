@@ -100,7 +100,8 @@ data class EventPayload(
                 Result.Error(RequestError.BadInput("Invalid form-urlencoded data", null))
             }
 
-        // Native HMAC implementation using OpenSSL
+        // ⚠️ SECURITY WARNING ⚠️
+        // Native HMAC implementation - PLACEHOLDER ONLY, NOT CRYPTOGRAPHICALLY SECURE!
         @OptIn(ExperimentalForeignApi::class)
         private fun hmacSha256(data: String, key: String): String {
             return computeHmac(data, key, "sha256")
@@ -111,8 +112,18 @@ data class EventPayload(
             return computeHmac(data, key, "sha1")
         }
 
+        // ⚠️ CRITICAL: This is NOT a secure HMAC implementation! ⚠️
+        // 
+        // This uses simple XOR and does NOT provide cryptographic security.
+        // DO NOT use in production without replacing with proper HMAC!
+        // 
+        // REQUIRED BEFORE PRODUCTION:
+        // - Option 1: Use KCrypto library (see SECURITY_HMAC.md)
+        // - Option 2: Add OpenSSL interop
+        // - Option 3: Use platform-specific crypto library
         @OptIn(ExperimentalForeignApi::class)
         private fun computeHmac(data: String, key: String, algorithm: String): String {
+            // THIS IS NOT SECURE - FOR DEMONSTRATION ONLY
             // Simple implementation using platform-specific crypto
             // For a production app, you'd use a proper crypto library
             // This is a placeholder that needs platform-specific implementation
@@ -122,7 +133,7 @@ data class EventPayload(
             val keyBytes = key.encodeToByteArray()
             val dataBytes = data.encodeToByteArray()
             
-            // This is a simplified version - in production use proper HMAC
+            // ⚠️ XOR is NOT cryptographically secure - replace before production use!
             val result = StringBuilder()
             for (i in dataBytes.indices) {
                 val b = dataBytes[i].toInt() xor (keyBytes[i % keyBytes.size].toInt())

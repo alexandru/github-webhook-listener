@@ -71,14 +71,14 @@ tasks {
     }
 }
 
-// Wrapper task for easy execution
-tasks.register("runNative") {
-    dependsOn("nativeBinaries")
+// Helper task for development
+tasks.register("runNativeBinary") {
+    dependsOn("linkReleaseExecutableNative")
     group = "application"
-    description = "Build and run the native executable"
+    description = "Build the native executable"
     doLast {
-        val executable = kotlin.targets.getByName<KotlinNativeTarget>("native")
-            .binaries.getExecutable("main", "RELEASE")
-        println("Executable: ${executable.outputFile.absolutePath}")
+        val binPath = "build/bin/native/releaseExecutable/github-webhook-listener.kexe"
+        println("Native binary built at: $binPath")
+        println("Run with: ./$binPath <config-file>")
     }
 }
