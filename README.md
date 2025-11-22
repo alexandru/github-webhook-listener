@@ -15,8 +15,9 @@ than 10 MB of RAM, so it can be installed on under-powered servers.
 
 > **NOTE**
 > 
-> This used to be a Haskell project, that I switched to Kotlin. The code is still available on the [v1-haskell](https://github.com/alexandru/github-webhook-listener/tree/v1-haskell) branch. 
-> There's also an experimental Rust branch, see [v3-rust](https://github.com/alexandru/github-webhook-listener/tree/v3-rust).
+> This version has been migrated to **Kotlin/Native** from the previous Kotlin/JVM + GraalVM Native Image implementation. The native binary is now compiled directly with Kotlin/Native for better memory efficiency and smaller binary size.
+> 
+> Previous versions: The original [v1-haskell](https://github.com/alexandru/github-webhook-listener/tree/v1-haskell) branch uses Haskell. There's also an experimental Rust branch, see [v3-rust](https://github.com/alexandru/github-webhook-listener/tree/v3-rust).
 
 ## Setup
 
@@ -28,17 +29,7 @@ docker run \
   -ti ghcr.io/alexandru/github-webhook-listener:native-latest
 ```
 
-There are 2 versions of this project being published. The default is a binary compiled to a native executable via [GraalVM's Native Image](https://www.graalvm.org/22.1/reference-manual/native-image/). The other image is a JAR that runs with OpenJDK. You can choose between them via the tag used. To use the OpenJDK version, look for tags prefixed with `jvm-`:
-
-```sh
-docker run \
-  -p 8080:8080 \
-  -ti ghcr.io/alexandru/github-webhook-listener:jvm-latest
-```
-
-### Which version to choose?
-
-The native version (e.g., the `native-latest` tag) uses under 10 MB of RAM, and it's good for underpowered servers. The JVM version (e.g., `jvm-latest`) has at least a 50 MB penalty, so use it only if you bump into problems with the native version. The JVM's execution is optimized with the Shenandoah GC, though, releasing memory back to the OS, it's as optimal as a Java process can be, and if you have the RAM, you might prefer it.
+The image contains a native executable compiled with Kotlin/Native, optimized for minimal memory usage (typically under 10 MB of RAM) and fast startup times.
 
 ### Server Configuration
 
@@ -130,41 +121,45 @@ NOTEs on those fields:
 
 ## Development
 
-The project uses [Kotlin](https://kotlinlang.org/) as the programming language, with [Ktor](https://ktor.io/). And the setup is optimized for [GraalVM's Native Image](https://www.graalvm.org/22.2/reference-manual/native-image/).
+The project uses [Kotlin/Native](https://kotlinlang.org/docs/native-overview.html) as the programming language, with [Ktor](https://ktor.io/) for the HTTP server. The setup is optimized for minimal memory usage and small binary size.
 
-To run the project in development mode:
-
-```sh
-./gradlew run -Pdevelopment --args="./config/application-dummy.conf"
-```
-
-To run after adding new dependencies:
+To run the project in development mode (requires Kotlin/Native toolchain):
 
 ```sh
-./gradlew refreshVersionsMigrate  --mode=VersionCatalogOnly
+./gradlew nativeCompile
+./build/bin/native/releaseExecutable/github-webhook-listener.kexe ./config/application-dummy.yaml
 ```
 
 To update project dependencies:
 
 ```sh
-./gradlew refreshVersions
+./gradlew dependencyUpdates
 ```
 
-To build the Docker image for the JVM version from scratch:
+To build the Docker image:
 
 ```sh 
-make build-jvm
+docker build -f ./src/nativeMain/docker/Dockerfile.native -t github-webhook-listener .
 ```
 
-Or the native version:
+### Migration from JVM/GraalVM
 
-```sh
-make build-native
-```
+This project was migrated from Kotlin/JVM with GraalVM Native Image to Kotlin/Native for:
+- Better memory efficiency (native memory management)
+- Smaller binary size (no JVM overhead)
+- Faster startup times
+- Direct native compilation without JVM intermediary
 
-### Issues with native-image
+Key changes in the migration:
+- Replaced JVM-specific libraries (Arrow, Logback, Commons) with native equivalents
+- Replaced Java File I/O with POSIX-based native APIs
+- Removed GraalVM Native Image configuration
+- Simplified dependency management with Kotlin Multiplatform
 
-- [Kotlinx Serialization with GraalVM Native Images](https://github.com/Kotlin/kotlinx.serialization/issues/1125)
+### Issues with Kotlin/Native
+
+- HMAC implementation uses a simplified approach - production deployments should use a proper crypto library
+- YAML parsing is simplified - complex YAML files may not be fully supported
 
 ## License
 
