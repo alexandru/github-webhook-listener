@@ -12,6 +12,21 @@ WORKDIR /app/source
 RUN microdnf install findutils -y
 RUN ./gradlew nativeCompile --no-daemon
 
+# Install UPX and compress the native executable
+# UPX (Ultimate Packer for eXecutables) significantly reduces binary size
+RUN microdnf install -y xz && \
+    curl -L https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz -o upx.tar.xz && \
+    tar -xf upx.tar.xz && \
+    mv upx-4.2.4-amd64_linux/upx /usr/local/bin/ && \
+    rm -rf upx.tar.xz upx-4.2.4-amd64_linux
+
+# Show original size and compress with UPX using best compression
+RUN echo "Original binary size:" && \
+    ls -lh /app/source/build/native/nativeCompile/github-webhook-listener && \
+    upx --best --lzma /app/source/build/native/nativeCompile/github-webhook-listener && \
+    echo "Compressed binary size:" && \
+    ls -lh /app/source/build/native/nativeCompile/github-webhook-listener
+
 FROM debian:stable-slim
 RUN mkdir -p /opt/app/config
 RUN useradd --uid 1001 --home-dir /opt/app --shell /bin/sh appuser

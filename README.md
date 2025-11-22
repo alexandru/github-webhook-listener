@@ -166,6 +166,12 @@ make build-native
 
 - [Kotlinx Serialization with GraalVM Native Images](https://github.com/Kotlin/kotlinx.serialization/issues/1125)
 
+### Binary Size Optimization
+
+The native executable is compressed using [UPX (Ultimate Packer for eXecutables)](https://upx.github.io/) to reduce its size. UPX is integrated into the Docker build process (`Dockerfile.native`) and automatically compresses the GraalVM native image binary after compilation.
+
+The compression uses the `--best --lzma` flags for maximum compression, typically reducing the executable size by 60-70% while maintaining full functionality. The compressed binary is self-extracting and has minimal runtime overhead.
+
 ## License
 
 Copyright © 2018-2022 Alexandru Nedelcu, some rights reserved.
