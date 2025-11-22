@@ -92,6 +92,107 @@ dependencies {
 // }
 
 tasks {
+    // UPX compression configuration
+    val upxVersion = "4.2.4"
+    val upxDir = layout.buildDirectory.dir("upx").get().asFile
+    val upxExecutable = File(upxDir, "upx")
+    val nativeBinaryName = "github-webhook-listener"
+
+    val downloadUpx by registering {
+        description = "Downloads UPX (Ultimate Packer for eXecutables) for binary compression"
+        group = "build"
+        
+        onlyIf { !upxExecutable.exists() }
+        
+        doLast {
+            // Validate OS - UPX compression is only supported on Linux for this build
+            val osName = System.getProperty("os.name").lowercase()
+            if (!osName.contains("linux")) {
+                throw GradleException("UPX compression is only supported on Linux. Current OS: $osName")
+            }
+            
+            upxDir.mkdirs()
+            
+            val osArch = System.getProperty("os.arch")
+            val upxArch = when {
+                osArch.contains("aarch64") || osArch.contains("arm64") -> "arm64"
+                osArch.contains("amd64") || osArch.contains("x86_64") -> "amd64"
+                else -> throw GradleException("Unsupported architecture for UPX: $osArch")
+            }
+            
+            val upxArchive = File(upxDir, "upx.tar.xz")
+            val upxUrl = "https://github.com/upx/upx/releases/download/v$upxVersion/upx-$upxVersion-${upxArch}_linux.tar.xz"
+            
+            println("Downloading UPX from $upxUrl")
+            // Download UPX using Ant task (available in Gradle by default)
+            ant.invokeMethod("get", mapOf("src" to upxUrl, "dest" to upxArchive))
+            
+            // Extract the archive using tar command (available on Linux)
+            println("Extracting UPX archive...")
+            val extractProcess = ProcessBuilder("tar", "-xf", upxArchive.name)
+                .directory(upxDir)
+                .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+                .redirectError(ProcessBuilder.Redirect.INHERIT)
+                .start()
+            val extractResult = extractProcess.waitFor()
+            if (extractResult != 0) {
+                throw GradleException("Failed to extract UPX archive")
+            }
+            
+            // Move the upx binary to the root of upxDir
+            val extractedDir = File(upxDir, "upx-$upxVersion-${upxArch}_linux")
+            val upxBinary = File(extractedDir, "upx")
+            if (!upxBinary.exists()) {
+                throw GradleException("UPX binary not found in extracted archive at: ${upxBinary.absolutePath}")
+            }
+            upxBinary.copyTo(upxExecutable, overwrite = true)
+            upxExecutable.setExecutable(true)
+            
+            // Clean up
+            upxArchive.delete()
+            extractedDir.deleteRecursively()
+            
+            println("UPX downloaded successfully to ${upxExecutable.absolutePath}")
+        }
+    }
+
+    val compressNativeBinary by registering(Exec::class) {
+        description = "Compresses the native binary with UPX"
+        group = "build"
+        
+        dependsOn(downloadUpx, "nativeCompile")
+        
+        doFirst {
+            val binaryPath = layout.buildDirectory.file("native/nativeCompile/$nativeBinaryName").get().asFile
+            
+            if (!binaryPath.exists()) {
+                throw GradleException("Native binary not found at: ${binaryPath.absolutePath}")
+            }
+            
+            val sizeKB = binaryPath.length() / 1024
+            println("Original binary size: $sizeKB KB")
+        }
+        
+        workingDir = layout.buildDirectory.get().asFile
+        commandLine(
+            upxExecutable.absolutePath,
+            "--best",
+            "--lzma",
+            "native/nativeCompile/$nativeBinaryName"
+        )
+        
+        doLast {
+            val binaryPath = layout.buildDirectory.file("native/nativeCompile/$nativeBinaryName").get().asFile
+            val sizeKB = binaryPath.length() / 1024
+            println("Compressed binary size: $sizeKB KB")
+        }
+    }
+
+    // Make nativeCompile automatically compress the binary
+    named("nativeCompile") {
+        finalizedBy(compressNativeBinary)
+    }
+
     withType<JavaCompile>().configureEach {
         options.release.set(21)
     }
