@@ -1,108 +1,58 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-// import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
-    application
-    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.versions)
-    alias(libs.plugins.ktor)
-    alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.graalvm.buildtools.native)
 }
 
 group = "org.alexn.hook"
 version = "0.0.1"
 
-application {
-    mainClass.set("org.alexn.hook.MainKt")
-
-    if (project.ext.has("development")) {
-        applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")
-    }
-    // https://www.graalvm.org/22.0/reference-manual/native-image/Agent/
-    if (project.ext.has("nativeAgent")) {
-        applicationDefaultJvmArgs = listOf("-agentlib:native-image-agent=config-output-dir=./src/main/resources/META-INF/native-image")
-    }
-}
-
-// https://ktor.io/docs/graalvm.html#execute-the-native-image-tool
-// https://github.com/ktorio/ktor-samples/blob/main/graalvm/build.gradle.kts
-graalvmNative {
-    // https://github.com/oracle/graalvm-reachability-metadata
-    // https://graalvm.github.io/native-build-tools/latest/gradle-plugin.html#metadata-support
-    metadataRepository {
-        enabled = true
-        // https://github.com/oracle/graalvm-reachability-metadata/releases/
-        version = "0.3.7"
-    }
-
-    binaries {
-        named("main") {
-            fallback.set(false)
-            verbose.set(true)
-
-            buildArgs.add("--initialize-at-build-time=io.ktor,kotlinx,kotlin,org.xml.sax.helpers,org.slf4j.helpers")
-            buildArgs.add("--initialize-at-build-time=org.slf4j.LoggerFactory,ch.qos.logback,org.slf4j.impl.StaticLoggerBinder")
-            buildArgs.add("--initialize-at-build-time=com.github.ajalt.mordant.internal.nativeimage.NativeImagePosixMppImpls")
-            buildArgs.add("--initialize-at-build-time=ch.qos.logback.classic.Logger")
-
-            buildArgs.add("--no-fallback")
-            buildArgs.add("-H:+UnlockExperimentalVMOptions")
-            buildArgs.add("-H:+InstallExitHandlers")
-            buildArgs.add("-H:+ReportExceptionStackTraces")
-            buildArgs.add("-H:+ReportUnsupportedElementsAtRuntime")
-            buildArgs.add("-R:MaxHeapSize=30m")
-            buildArgs.add("-R:MaxNewSize=2m")
-            buildArgs.add("-R:MinHeapSize=2m")
-
-            imageName.set("github-webhook-listener")
-        }
-    }
-}
-
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation(libs.arrow.core)
-    implementation(libs.arrow.fx.coroutines)
-    implementation(libs.arrow.fx.stm)
-    implementation(libs.arrow.suspendapp)
-    implementation(libs.clikt)
-    implementation(libs.commons.codec)
-    implementation(libs.commons.text)
-    implementation(libs.kaml)
-    implementation(libs.kotlin.logging)
-    implementation(libs.kotlin.stdlib.jdk8)
-    implementation(libs.kotlin.test.junit)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.kotlinx.serialization.hocon)
-    implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.ktor.server.cio)
-    implementation(libs.ktor.server.core)
-    implementation(libs.ktor.server.html.builder)
-    implementation(libs.ktor.server.tests.jvm)
-    implementation(libs.logback.classic)
-}
-
-// kotlin {
-//     jvmToolchain(22)
-// }
-
-tasks {
-    withType<JavaCompile>().configureEach {
-        options.release.set(21)
-    }
-
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-            javaParameters.set(true)
+kotlin {
+    // Configure native targets for Linux
+    linuxX64("native") {
+        binaries {
+            executable {
+                entryPoint = "org.alexn.hook.main"
+                baseName = "github-webhook-listener"
+                
+                // Optimize for size and memory
+                freeCompilerArgs += listOf(
+                    "-opt",
+                    "-Xallocator=mimalloc",
+                )
+            }
         }
     }
 
+    sourceSets {
+        val nativeMain by getting {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.ktor.server.core)
+                implementation(libs.ktor.server.cio)
+                implementation(libs.ktor.server.html.builder)
+                implementation(libs.clikt)
+            }
+        }
+
+        val nativeTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
+        }
+    }
+}
+
+tasks {
     named<DependencyUpdatesTask>("dependencyUpdates").configure {
         fun isNonStable(version: String): Boolean {
             val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
@@ -119,13 +69,16 @@ tasks {
         outputDir = "build/dependencyUpdates"
         reportfileName = "report"
     }
-
-    test {
-    }
 }
 
-ktor {
-    fatJar {
-        archiveFileName.set("github-webhook-listener-fat.jar")
+// Wrapper task for easy execution
+tasks.register("runNative") {
+    dependsOn("nativeBinaries")
+    group = "application"
+    description = "Build and run the native executable"
+    doLast {
+        val executable = kotlin.targets.getByName<KotlinNativeTarget>("native")
+            .binaries.getExecutable("main", "RELEASE")
+        println("Executable: ${executable.outputFile.absolutePath}")
     }
 }

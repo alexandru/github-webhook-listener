@@ -1,0 +1,29 @@
+# To build:
+#
+#   docker build -f ./src/nativeMain/docker/Dockerfile.native -t github-webhook-listener-native .
+#
+# To run:
+#
+#   docker run -p 8080:8080 github-webhook-listener-native
+#
+FROM gradle:9-jdk25 AS build
+COPY --chown=gradle:gradle . /home/gradle/src
+WORKDIR /home/gradle/src
+RUN gradle nativeCompile --no-daemon
+
+FROM debian:stable-slim
+RUN mkdir -p /opt/app/config
+RUN useradd --uid 1001 --home-dir /opt/app --shell /bin/sh appuser
+WORKDIR /opt/app
+RUN chown -R appuser /opt/app && chmod -R "g+rwX" /opt/app && chown -R appuser:root /opt/app
+
+RUN apt-get update && apt-get -y upgrade && apt-get install -y git curl jq
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+COPY --from=build --chown=appuser:root /home/gradle/src/build/bin/native/releaseExecutable/github-webhook-listener.kexe /opt/app/github-webhook-listener
+COPY --from=build --chown=appuser:root /home/gradle/src/config/application-dummy.yaml /opt/app/config/config.yaml
+
+EXPOSE 8080
+USER appuser
+
+CMD ["/opt/app/github-webhook-listener","/opt/app/config/config.yaml"]
