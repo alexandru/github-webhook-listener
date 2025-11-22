@@ -14,6 +14,8 @@ RUN ./gradlew nativeCompile --no-daemon
 
 # Install UPX and compress the native executable
 # UPX (Ultimate Packer for eXecutables) significantly reduces binary size
+# Version is parameterized for easy updates
+ARG UPX_VERSION=4.2.4
 RUN microdnf install -y xz && \
     ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then \
@@ -23,17 +25,18 @@ RUN microdnf install -y xz && \
     else \
         echo "Unsupported architecture: $ARCH" && exit 1; \
     fi && \
-    curl -L https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-${UPX_ARCH}_linux.tar.xz -o upx.tar.xz && \
+    curl -L https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-${UPX_ARCH}_linux.tar.xz -o upx.tar.xz && \
     tar -xf upx.tar.xz && \
-    mv upx-4.2.4-${UPX_ARCH}_linux/upx /usr/local/bin/ && \
-    rm -rf upx.tar.xz upx-4.2.4-${UPX_ARCH}_linux
+    mv upx-${UPX_VERSION}-${UPX_ARCH}_linux/upx /usr/local/bin/ && \
+    rm -rf upx.tar.xz upx-${UPX_VERSION}-${UPX_ARCH}_linux
 
 # Show original size and compress with UPX using best compression
-RUN echo "Original binary size:" && \
-    ls -lh /app/source/build/native/nativeCompile/github-webhook-listener && \
-    upx --best --lzma /app/source/build/native/nativeCompile/github-webhook-listener && \
+RUN BINARY_PATH="/app/source/build/native/nativeCompile/github-webhook-listener" && \
+    echo "Original binary size:" && \
+    ls -lh "$BINARY_PATH" && \
+    upx --best --lzma "$BINARY_PATH" && \
     echo "Compressed binary size:" && \
-    ls -lh /app/source/build/native/nativeCompile/github-webhook-listener
+    ls -lh "$BINARY_PATH"
 
 FROM debian:stable-slim
 RUN mkdir -p /opt/app/config
