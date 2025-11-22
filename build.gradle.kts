@@ -96,6 +96,7 @@ tasks {
     val upxVersion = "4.2.4"
     val upxDir = layout.buildDirectory.dir("upx").get().asFile
     val upxExecutable = File(upxDir, "upx")
+    val nativeBinaryName = "github-webhook-listener"
 
     val downloadUpx by registering {
         description = "Downloads UPX (Ultimate Packer for eXecutables) for binary compression"
@@ -104,23 +105,29 @@ tasks {
         onlyIf { !upxExecutable.exists() }
         
         doLast {
+            // Validate OS - UPX compression is only supported on Linux for this build
+            val osName = System.getProperty("os.name").lowercase()
+            if (!osName.contains("linux")) {
+                throw GradleException("UPX compression is only supported on Linux. Current OS: $osName")
+            }
+            
             upxDir.mkdirs()
             
             val osArch = System.getProperty("os.arch")
             val upxArch = when {
                 osArch.contains("aarch64") || osArch.contains("arm64") -> "arm64"
                 osArch.contains("amd64") || osArch.contains("x86_64") -> "amd64"
-                else -> throw GradleException("Unsupported architecture: $osArch")
+                else -> throw GradleException("Unsupported architecture for UPX: $osArch")
             }
             
             val upxArchive = File(upxDir, "upx.tar.xz")
             val upxUrl = "https://github.com/upx/upx/releases/download/v$upxVersion/upx-$upxVersion-${upxArch}_linux.tar.xz"
             
             println("Downloading UPX from $upxUrl")
-            // Download UPX using Ant task
+            // Download UPX using Ant task (available in Gradle by default)
             ant.invokeMethod("get", mapOf("src" to upxUrl, "dest" to upxArchive))
             
-            // Extract the archive using ProcessBuilder
+            // Extract the archive using tar command (available on Linux)
             println("Extracting UPX archive...")
             val extractProcess = ProcessBuilder("tar", "-xf", upxArchive.name)
                 .directory(upxDir)
@@ -135,6 +142,9 @@ tasks {
             // Move the upx binary to the root of upxDir
             val extractedDir = File(upxDir, "upx-$upxVersion-${upxArch}_linux")
             val upxBinary = File(extractedDir, "upx")
+            if (!upxBinary.exists()) {
+                throw GradleException("UPX binary not found in extracted archive at: ${upxBinary.absolutePath}")
+            }
             upxBinary.copyTo(upxExecutable, overwrite = true)
             upxExecutable.setExecutable(true)
             
@@ -153,7 +163,7 @@ tasks {
         dependsOn(downloadUpx, "nativeCompile")
         
         doFirst {
-            val binaryPath = layout.buildDirectory.file("native/nativeCompile/github-webhook-listener").get().asFile
+            val binaryPath = layout.buildDirectory.file("native/nativeCompile/$nativeBinaryName").get().asFile
             
             if (!binaryPath.exists()) {
                 throw GradleException("Native binary not found at: ${binaryPath.absolutePath}")
@@ -168,11 +178,11 @@ tasks {
             upxExecutable.absolutePath,
             "--best",
             "--lzma",
-            "native/nativeCompile/github-webhook-listener"
+            "native/nativeCompile/$nativeBinaryName"
         )
         
         doLast {
-            val binaryPath = layout.buildDirectory.file("native/nativeCompile/github-webhook-listener").get().asFile
+            val binaryPath = layout.buildDirectory.file("native/nativeCompile/$nativeBinaryName").get().asFile
             val sizeKB = binaryPath.length() / 1024
             println("Compressed binary size: $sizeKB KB")
         }
