@@ -2,11 +2,13 @@
 
 package org.alexn.hook
 
+import arrow.core.Either
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import platform.posix.fclose
 import platform.posix.fgets
 import platform.posix.fopen
@@ -43,13 +45,13 @@ data class AppConfig(
 
     companion object {
         @OptIn(ExperimentalForeignApi::class)
-        fun parseFile(filePath: String): Result<AppConfig> {
+        fun parseFile(filePath: String): Either<ConfigException, AppConfig> {
             val extension = filePath.substringAfterLast('.', "").lowercase()
             
             val content = try {
                 readFile(filePath)
             } catch (ex: Exception) {
-                return Result.Error(
+                return Either.Left(
                     ConfigException(
                         "Failed to read configuration file: $filePath",
                         ex,
@@ -58,113 +60,40 @@ data class AppConfig(
             }
 
             return when (extension) {
-                "json" -> parseJson(content)
-                "yaml", "yml" -> {
-                    // For now, we'll convert simple YAML to JSON
-                    // Full YAML parsing would require a native YAML library
-                    parseSimpleYaml(content)
-                }
+                "yaml", "yml" -> parseYaml(content)
                 else ->
-                    Result.Error(
+                    Either.Left(
                         ConfigException(
-                            "Unsupported configuration file format: $extension",
+                            "Unsupported configuration file format: $extension (only YAML/YML supported for native)",
                         ),
                     )
             }
         }
 
-        fun parseJson(string: String): Result<AppConfig> =
+        fun parseYaml(string: String): Either<ConfigException, AppConfig> =
             try {
-                val config = jsonParser.decodeFromString(
-                    serializer(),
-                    string,
-                )
-                Result.Success(config)
-            } catch (ex: Exception) {
-                Result.Error(
-                    ConfigException(
-                        "Failed to parse JSON configuration",
-                        ex,
+                Either.Right(
+                    yamlParser.decodeFromString(
+                        serializer(),
+                        string,
                     ),
                 )
-            }
-
-        // Simple YAML parser for basic configurations
-        // This is a simplified version that handles the basic structure
-        private fun parseSimpleYaml(yaml: String): Result<AppConfig> {
-            try {
-                val lines = yaml.lines().filter { it.isNotBlank() && !it.trim().startsWith("#") }
-                val json = buildString {
-                    append("{")
-                    var inHttp = false
-                    var inProjects = false
-                    var currentProject: String? = null
-                    var indent = 0
-                    
-                    for ((index, line) in lines.withIndex()) {
-                        val trimmed = line.trim()
-                        val currentIndent = line.takeWhile { it == ' ' }.length
-                        
-                        when {
-                            trimmed.startsWith("http:") -> {
-                                if (index > 0) append(",")
-                                append("\"http\":{")
-                                inHttp = true
-                                inProjects = false
-                                currentProject = null
-                            }
-                            trimmed.startsWith("projects:") -> {
-                                if (inHttp) append("}")
-                                append(",\"projects\":{")
-                                inHttp = false
-                                inProjects = true
-                                currentProject = null
-                            }
-                            inHttp && trimmed.contains(":") -> {
-                                val (key, value) = trimmed.split(":", limit = 2)
-                                val cleanValue = value.trim().trim('"')
-                                if (trimmed != lines.first { it.contains("http:") }) append(",")
-                                append("\"${key.trim()}\":${if (cleanValue.toIntOrNull() != null) cleanValue else "\"$cleanValue\""}")
-                            }
-                            inProjects && currentIndent == 2 && trimmed.contains(":") && !trimmed.contains("  ") -> {
-                                // Project name
-                                if (currentProject != null) append("}")
-                                val projectName = trimmed.removeSuffix(":")
-                                if (currentProject != null) append(",")
-                                append("\"$projectName\":{")
-                                currentProject = projectName
-                            }
-                            currentProject != null && trimmed.contains(":") -> {
-                                // Project property
-                                val (key, value) = trimmed.split(":", limit = 2)
-                                val cleanValue = value.trim().trim('"')
-                                if (trimmed != lines.first { it.contains("$currentProject:") }.let { lines.indexOf(it) + 1 }.let { if (it < lines.size) lines[it] else trimmed }) append(",")
-                                append("\"${key.trim()}\":\"$cleanValue\"")
-                            }
-                        }
-                    }
-                    if (currentProject != null) append("}")
-                    if (inProjects) append("}")
-                    append("}")
-                }
-                
-                return parseJson(json)
             } catch (ex: Exception) {
-                return Result.Error(
+                Either.Left(
                     ConfigException(
                         "Failed to parse YAML configuration",
                         ex,
                     ),
                 )
             }
-        }
 
-        private val jsonParser =
-            Json {
-                isLenient = true
-                ignoreUnknownKeys = true
-                explicitNulls = false
-            }
+        private val yamlParser =
+            Yaml(
+                configuration =
+                    YamlConfiguration(
+                        strictMode = false,
+                    ),
+            )
 
         @OptIn(ExperimentalForeignApi::class)
         private fun readFile(path: String): String {
@@ -193,9 +122,3 @@ class ConfigException(
     message: String,
     cause: Throwable? = null,
 ) : Exception(message, cause)
-
-// Simple Result type to replace Arrow's Either
-sealed class Result<out T> {
-    data class Success<T>(val value: T) : Result<T>()
-    data class Error(val exception: Exception) : Result<Nothing>()
-}

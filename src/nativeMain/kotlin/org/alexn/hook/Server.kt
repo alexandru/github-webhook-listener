@@ -1,5 +1,10 @@
 package org.alexn.hook
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.raise.either
+import arrow.core.raise.ensureNotNull
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.call
@@ -20,6 +25,8 @@ import kotlinx.html.li
 import kotlinx.html.p
 import kotlinx.html.title
 import kotlinx.html.ul
+
+private val logger = KotlinLogging.logger {}
 
 suspend fun startServer(appConfig: AppConfig) {
     val commandTrigger = CommandTrigger(appConfig.projects)
@@ -70,57 +77,55 @@ fun Application.configureRouting(
                 return@post
             }
 
-            val project = config.projects[projectKey]
-            if (project == null) {
-                val err = RequestError.NotFound("Project `$projectKey` does not exist")
-                call.respondText(err.message, status = HttpStatusCode.fromValue(err.httpCode))
-                println("POST /$projectKey — Not Found")
-                return@post
-            }
+            val response =
+                either {
+                    val project = config.projects[projectKey]
+                    ensureNotNull(project) {
+                        RequestError.NotFound("Project `$projectKey` does not exist")
+                    }
 
-            val signature = call.request.header("X-Hub-Signature-256") ?: call.request.header("X-Hub-Signature")
-            val body = call.receiveText()
-            
-            val authResult = EventPayload.authenticateRequest(body, project.secret, signature)
-            if (authResult is Result.Error) {
-                val err = authResult.exception as? RequestError.Forbidden ?: RequestError.Forbidden("Authentication failed")
-                call.respondText(err.message, status = HttpStatusCode.fromValue(err.httpCode))
-                println("POST /$projectKey — Forbidden: ${err.message}")
-                return@post
-            }
+                    val signature = call.request.header("X-Hub-Signature-256") ?: call.request.header("X-Hub-Signature")
+                    val body = call.receiveText()
+                    EventPayload
+                        .authenticateRequest(body, project.secret, signature)
+                        .bind()
 
-            val parsed = EventPayload.parse(call.request.contentType(), body)
-            if (parsed is Result.Error) {
-                val err = (parsed.exception as? RequestError) ?: RequestError.BadInput("Parse error", parsed.exception)
-                call.respondText(err.message, status = HttpStatusCode.fromValue(err.httpCode))
-                println("POST /$projectKey — Bad Input: ${err.message}")
-                return@post
-            }
+                    val parsed =
+                        EventPayload.parse(call.request.contentType(), body).bind()
 
-            val payload = (parsed as Result.Success).value
-            if (!payload.shouldProcess(project)) {
-                call.respondText("Nothing to do for project `$projectKey`", status = HttpStatusCode.OK)
-                println("POST /$projectKey — Skipped")
-                return@post
-            }
+                    val result =
+                        if (parsed.shouldProcess(project)) {
+                            commandTriggerService.triggerCommand(projectKey)
+                        } else {
+                            RequestError.Skipped("Nothing to do for project `$projectKey`").left()
+                        }
 
-            val result = commandTriggerService.triggerCommand(projectKey)
-            when (result) {
-                is Result.Success -> {
-                    call.respondText("OK", status = HttpStatusCode.OK)
-                    println("POST /$projectKey — OK")
+                    result.bind()
                 }
-                is Result.Error -> {
-                    val err = (result.exception as? RequestError) ?: RequestError.Internal("Command execution failed", result.exception, null)
+
+            when (response) {
+                is Either.Right -> {
+                    call.respondText("OK", status = HttpStatusCode.OK)
+                    logger.info { "POST /$projectKey — OK" }
+                }
+                is Either.Left -> {
+                    val err = response.value
                     call.respondText(err.message, status = HttpStatusCode.fromValue(err.httpCode))
-                    println("POST /$projectKey — Error: ${err.message}")
+                    when (err) {
+                        is RequestError.Skipped ->
+                            logger.info { "POST /$projectKey — Skipped" }
+                        else -> {
+                            val ex = err.toException()
+                            logger.warn(ex) { "POST /$projectKey — ${ex.message}" }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-// Simple URL encoding function
+// Simple URL encoding function for native
 private fun urlEncode(str: String): String {
     return str.replace("%", "%25")
         .replace(" ", "%20")
@@ -143,4 +148,97 @@ private fun urlEncode(str: String): String {
         .replace("@", "%40")
         .replace("[", "%5B")
         .replace("]", "%5D")
+}
+            configureRouting(appConfig, commandTrigger)
+        }
+    runInterruptible {
+        server.start(wait = true)
+    }
+}
+
+fun Application.configureRouting(
+    config: AppConfig,
+    commandTriggerService: CommandTrigger,
+) {
+    val logger: Logger by lazy {
+        LoggerFactory.getLogger("org.alexn.hook.Routing")
+    }
+    val basePath = config.http.basePath
+
+    routing {
+        if (config.http.basePath.isNotEmpty()) {
+            get(config.http.basePath) {
+                call.respondRedirect("$basePath/")
+            }
+        }
+
+        get("$basePath/") {
+            call.respondHtml(HttpStatusCode.OK) {
+                head {
+                    title { +"GitHub Webhook Listener" }
+                }
+                body {
+                    p { +"Configured hooks:" }
+                    ul {
+                        for (p in config.projects) {
+                            li { +URLEncoder.encode(p.key, UTF_8) }
+                        }
+                    }
+                }
+            }
+        }
+
+        post("$basePath/{project}") {
+            val projectKey = call.parameters["project"]
+            if (projectKey == null) {
+                call.respondText("Project key not specified", status = HttpStatusCode.BadRequest)
+                return@post
+            }
+
+            val response =
+                either {
+                    val project = config.projects[projectKey]
+                    ensureNotNull(project) {
+                        RequestError.NotFound("Project `$projectKey` does not exist")
+                    }
+
+                    val signature = call.request.header("X-Hub-Signature-256") ?: call.request.header("X-Hub-Signature")
+                    val body = call.receiveText()
+                    EventPayload
+                        .authenticateRequest(body, project.secret, signature)
+                        .bind()
+
+                    val parsed =
+                        EventPayload.parse(call.request.contentType(), body).bind()
+
+                    val result =
+                        if (parsed.shouldProcess(project)) {
+                            commandTriggerService.triggerCommand(projectKey)
+                        } else {
+                            RequestError.Skipped("Nothing to do for project `$projectKey`").left()
+                        }
+
+                    result.bind()
+                }
+
+            when (response) {
+                is Either.Right -> {
+                    call.respondText("OK", status = HttpStatusCode.OK)
+                    logger.info("POST /$projectKey — OK")
+                }
+                is Either.Left -> {
+                    val err = response.value
+                    call.respondText(err.message, status = HttpStatusCode.fromValue(err.httpCode))
+                    when (err) {
+                        is RequestError.Skipped ->
+                            logger.info("POST /$projectKey — Skipped")
+                        else -> {
+                            val ex = err.toException()
+                            logger.warn("POST /$projectKey — ${ex.message}", ex.cause)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

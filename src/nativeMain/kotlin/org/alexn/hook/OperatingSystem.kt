@@ -1,5 +1,7 @@
 package org.alexn.hook
 
+import arrow.core.Option
+import arrow.core.recover
 import kotlinx.cinterop.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -20,12 +22,11 @@ data class CommandResult(
 @OptIn(ExperimentalForeignApi::class)
 suspend fun executeRawShellCommand(
     command: String,
-    dir: String? = null,
+    dir: File? = null,
 ): CommandResult =
     withContext(Dispatchers.IO) {
-        // Use popen to execute command
         val fullCommand = if (dir != null) {
-            "cd '$dir' && $command"
+            "cd '${dir.path}' && $command"
         } else {
             command
         }
@@ -36,7 +37,6 @@ suspend fun executeRawShellCommand(
 @OptIn(ExperimentalForeignApi::class)
 private fun executeCommand(command: String): CommandResult {
     val stdout = StringBuilder()
-    val stderr = StringBuilder()
     
     // Execute command and capture stdout
     val pipe = popen(command, "r")
@@ -55,7 +55,7 @@ private fun executeCommand(command: String): CommandResult {
             return CommandResult(
                 exitCode = actualExitCode,
                 stdout = stdout.toString(),
-                stderr = stderr.toString(),
+                stderr = "",
             )
         }
     }
@@ -72,6 +72,88 @@ private fun WEXITSTATUS(status: Int): Int {
     return (status shr 8) and 0xFF
 }
 
-val USER_HOME: String? by lazy {
-    getenv("HOME")?.toKString() ?: getenv("USERPROFILE")?.toKString()
+// File abstraction for native
+data class File(val path: String)
+
+val USER_HOME: File? by lazy {
+    Option
+        .fromNullable(getenv("HOME")?.toKString())
+        .filter { it.isNotEmpty() }
+        .recover { Option.fromNullable(getenv("USERPROFILE")?.toKString()).bind() }
+        .filter { it.isNotEmpty() }
+        .map { File(it) }
+        .getOrNull()
+}
+                dir,
+            )
+        try {
+            // Concurrent execution ensures the stream's buffer doesn't
+            // block processing when overflowing
+            val stdout =
+                async {
+                    runInterruptible(Dispatchers.IO) {
+                        // That `InputStream.read` doesn't listen to thread interruption
+                        // signals; but for future development it doesn't hurt
+                        String(proc.inputStream.readAllBytes(), UTF_8)
+                    }
+                }
+            val stderr =
+                async {
+                    runInterruptible(Dispatchers.IO) {
+                        String(proc.errorStream.readAllBytes(), UTF_8)
+                    }
+                }
+            CommandResult(
+                exitCode = runInterruptible(Dispatchers.IO) { proc.waitFor() },
+                stdout = stdout.await(),
+                stderr = stderr.await(),
+            )
+        } finally {
+            proc.destroy()
+        }
+    }
+
+/**
+ * Executes shell commands.
+ *
+ * This version does shell escaping of command arguments.
+ * WARN: command arguments need be given explicitly because
+ * they need to be properly escaped.
+
+ * @see [executeRawShellCommand]
+ */
+suspend fun executeEscapedShellCommand(
+    command: String,
+    args: List<String>? = null,
+    dir: File? = null,
+): CommandResult =
+    executeRawShellCommand(
+        command =
+            (listOf(command) + (args ?: listOf()))
+                .map(StringEscapeUtils::escapeXSI)
+                .joinToString(" "),
+        dir = dir,
+    )
+
+/**
+ * Executes shell commands.
+ */
+suspend fun executeRawShellCommand(
+    command: String,
+    dir: File? = null,
+): CommandResult =
+    executeCommand(
+        executable = Path.of("/bin/sh"),
+        args = listOf("-c", command),
+        dir = dir,
+    )
+
+val USER_HOME: File? by lazy {
+    Option
+        .fromNullable(System.getProperty("user.home"))
+        .filter { it.isNotEmpty() }
+        .recover { Option.fromNullable(System.getenv("HOME")).bind() }
+        .filter { it.isNotEmpty() }
+        .map { File(it) }
+        .getOrNull()
 }

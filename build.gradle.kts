@@ -1,5 +1,4 @@
 import com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -35,12 +34,33 @@ kotlin {
     sourceSets {
         val nativeMain by getting {
             dependencies {
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.kotlinx.serialization.json)
+                // Arrow libraries with native support
+                implementation(libs.arrow.core)
+                implementation(libs.arrow.fx.coroutines)
+                implementation(libs.arrow.fx.stm)
+                implementation(libs.arrow.suspendapp)
+                
+                // Ktor with native support
                 implementation(libs.ktor.server.core)
                 implementation(libs.ktor.server.cio)
                 implementation(libs.ktor.server.html.builder)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                
+                // Serialization
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kaml)
+                
+                // CLI
                 implementation(libs.clikt)
+                
+                // Coroutines
+                implementation(libs.kotlinx.coroutines.core)
+                
+                // Crypto for HMAC
+                implementation(libs.kcrypto)
+                
+                // Logging - using kotlin-logging with native support
+                implementation(libs.kotlin.logging)
             }
         }
 
@@ -71,14 +91,45 @@ tasks {
     }
 }
 
-// Helper task for development
-tasks.register("runNativeBinary") {
-    dependsOn("linkReleaseExecutableNative")
-    group = "application"
-    description = "Build the native executable"
-    doLast {
-        val binPath = "build/bin/native/releaseExecutable/github-webhook-listener.kexe"
-        println("Native binary built at: $binPath")
-        println("Run with: ./$binPath <config-file>")
+// kotlin {
+//     jvmToolchain(22)
+// }
+
+tasks {
+    withType<JavaCompile>().configureEach {
+        options.release.set(21)
+    }
+
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+            javaParameters.set(true)
+        }
+    }
+
+    named<DependencyUpdatesTask>("dependencyUpdates").configure {
+        fun isNonStable(version: String): Boolean {
+            val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
+            val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+            val isStable = stableKeyword || regex.matches(version)
+            return isStable.not()
+        }
+
+        rejectVersionIf {
+            isNonStable(candidate.version) && !isNonStable(currentVersion)
+        }
+        checkForGradleUpdate = true
+        outputFormatter = "html"
+        outputDir = "build/dependencyUpdates"
+        reportfileName = "report"
+    }
+
+    test {
+    }
+}
+
+ktor {
+    fatJar {
+        archiveFileName.set("github-webhook-listener-fat.jar")
     }
 }

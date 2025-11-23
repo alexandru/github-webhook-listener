@@ -1,5 +1,8 @@
 package org.alexn.hook
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeout
@@ -13,13 +16,15 @@ class CommandTrigger private constructor(
     private val locks: MutableMap<String, Mutex>,
 ) {
     private fun lockFor(key: String): Mutex {
-        return locks.getOrPut(key) { Mutex() }
+        return synchronized(locks) {
+            locks.getOrPut(key) { Mutex() }
+        }
     }
 
-    suspend fun triggerCommand(key: String): Result<Unit> {
+    suspend fun triggerCommand(key: String): Either<RequestError, Unit> {
         val project =
             projects[key]
-                ?: return Result.Error(RequestError.NotFound("Project `$key` does not exist"))
+                ?: return RequestError.NotFound("Project `$key` does not exist").left()
 
         val timeoutDuration = project.timeout ?: 30.seconds
         val mutex = lockFor(key)
@@ -29,14 +34,14 @@ class CommandTrigger private constructor(
                 withTimeout(timeoutDuration) {
                     executeRawShellCommand(
                         command = project.command,
-                        dir = project.directory,
+                        dir = File(project.directory),
                     )
                 }
             if (result.isSuccessful) {
-                Result.Success(Unit)
+                Unit.right()
             } else {
-                Result.Error(
-                    RequestError.Internal(
+                RequestError
+                    .Internal(
                         "Command execution failed",
                         null,
                         meta =
@@ -45,15 +50,13 @@ class CommandTrigger private constructor(
                                 "stdout" to result.stdout,
                                 "stderr" to result.stderr,
                             ),
-                    )
-                )
+                    ).left()
             }
         } catch (e: TimeoutCancellationException) {
-            Result.Error(
-                RequestError.TimedOut(
+            RequestError
+                .TimedOut(
                     "Command execution timed-out after $timeoutDuration",
-                )
-            )
+                ).left()
         } finally {
             mutex.unlock()
         }

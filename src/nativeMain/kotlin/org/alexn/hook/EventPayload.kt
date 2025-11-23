@@ -1,12 +1,15 @@
 package org.alexn.hook
 
+import arrow.core.Either
+import arrow.core.left
+import arrow.core.right
+import com.soywiz.krypto.HMAC
+import com.soywiz.krypto.encoding.Hex
 import io.ktor.http.ContentType
-import kotlinx.cinterop.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import platform.posix.*
 
 /**
  * <https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads>
@@ -27,14 +30,13 @@ data class EventPayload(
                 explicitNulls = false
             }
 
-        @OptIn(ExperimentalForeignApi::class)
         fun authenticateRequest(
             body: String,
             signatureKey: String,
             signatureHeader: String?,
-        ): Result<Unit> {
+        ): Either<RequestError.Forbidden, Unit> {
             if (signatureHeader == null) {
-                return Result.Error(RequestError.Forbidden("No signature header was provided"))
+                return RequestError.Forbidden("No signature header was provided").left()
             }
 
             val sha1Prefix = "sha1="
@@ -43,105 +45,79 @@ data class EventPayload(
             if (signatureHeader.startsWith(sha256Prefix)) {
                 val hmacHex = hmacSha256(body, signatureKey)
                 if (!signatureHeader.substring(sha256Prefix.length).equals(hmacHex, ignoreCase = true)) {
-                    return Result.Error(RequestError.Forbidden("Invalid checksum (sha256)"))
+                    return RequestError.Forbidden("Invalid checksum (sha256)").left()
                 }
-                return Result.Success(Unit)
+                return Unit.right()
             }
             if (signatureHeader.startsWith(sha1Prefix)) {
                 val hmacHex = hmacSha1(body, signatureKey)
                 if (!signatureHeader.substring(sha1Prefix.length).equals(hmacHex, ignoreCase = true)) {
-                    return Result.Error(RequestError.Forbidden("Invalid checksum (sha1)"))
+                    return RequestError.Forbidden("Invalid checksum (sha1)").left()
                 }
-                return Result.Success(Unit)
+                return Unit.right()
             }
-            return Result.Error(RequestError.Forbidden("Unsupported algorithm"))
+            return RequestError.Forbidden("Unsupported algorithm").left()
         }
 
         fun parse(
             contentType: ContentType,
             body: String,
-        ): Result<EventPayload> =
+        ): Either<RequestError, EventPayload> =
             if (contentType.match(ContentType("application", "json"))) {
                 parseJson(body)
             } else if (contentType.match(ContentType("application", "x-www-form-urlencoded"))) {
                 parseFormData(body)
             } else {
-                Result.Error(RequestError.UnsupportedMediaType("Cannot process `$contentType` media type"))
+                RequestError.UnsupportedMediaType("Cannot process `$contentType` media type").left()
             }
 
-        fun parseJson(json: String): Result<EventPayload> {
+        fun parseJson(json: String): Either<RequestError.BadInput, EventPayload> {
             try {
                 val payload = jsonParser.decodeFromString(serializer(), json)
-                return Result.Success(payload)
+                return payload.right()
             } catch (e: SerializationException) {
-                return Result.Error(RequestError.BadInput("Invalid JSON", e))
+                return RequestError.BadInput("Invalid JSON", e).left()
             } catch (e: IllegalArgumentException) {
-                return Result.Error(RequestError.BadInput("Invalid JSON", e))
+                return RequestError.BadInput("Invalid JSON", e).left()
             }
         }
 
-        fun parseFormData(body: String): Result<EventPayload> =
+        fun parseFormData(body: String): Either<RequestError.BadInput, EventPayload> =
             try {
                 val map = mutableMapOf<String, String>()
                 for (part in body.split("&")) {
                     val values = part.split("=").map { urlDecode(it) }
                     if (values.size !in 1..2) {
-                        return Result.Error(RequestError.BadInput("Invalid form-urlencoded data", null))
+                        return RequestError.BadInput("Invalid form-urlencoded data", null).left()
                     }
                     map[values[0]] = values.getOrNull(1) ?: ""
                 }
-                Result.Success(
-                    EventPayload(
-                        action = map["action"],
-                        ref = map["ref"],
-                    )
-                )
+                EventPayload(
+                    action = map["action"],
+                    ref = map["ref"],
+                ).right()
             } catch (e: Exception) {
-                Result.Error(RequestError.BadInput("Invalid form-urlencoded data", null))
+                RequestError.BadInput("Invalid form-urlencoded data", null).left()
             }
 
-        // ⚠️ SECURITY WARNING ⚠️
-        // Native HMAC implementation - PLACEHOLDER ONLY, NOT CRYPTOGRAPHICALLY SECURE!
-        @OptIn(ExperimentalForeignApi::class)
+        // HMAC using KCrypto library with native support
         private fun hmacSha256(data: String, key: String): String {
-            return computeHmac(data, key, "sha256")
+            val hmac = HMAC.hmacSHA256(
+                key.encodeToByteArray(),
+                data.encodeToByteArray()
+            )
+            return Hex.encode(hmac).lowercase()
         }
 
-        @OptIn(ExperimentalForeignApi::class)
         private fun hmacSha1(data: String, key: String): String {
-            return computeHmac(data, key, "sha1")
+            val hmac = HMAC.hmacSHA1(
+                key.encodeToByteArray(),
+                data.encodeToByteArray()
+            )
+            return Hex.encode(hmac).lowercase()
         }
 
-        // ⚠️ CRITICAL: This is NOT a secure HMAC implementation! ⚠️
-        // 
-        // This uses simple XOR and does NOT provide cryptographic security.
-        // DO NOT use in production without replacing with proper HMAC!
-        // 
-        // REQUIRED BEFORE PRODUCTION:
-        // - Option 1: Use KCrypto library (see SECURITY_HMAC.md)
-        // - Option 2: Add OpenSSL interop
-        // - Option 3: Use platform-specific crypto library
-        @OptIn(ExperimentalForeignApi::class)
-        private fun computeHmac(data: String, key: String, algorithm: String): String {
-            // THIS IS NOT SECURE - FOR DEMONSTRATION ONLY
-            // Simple implementation using platform-specific crypto
-            // For a production app, you'd use a proper crypto library
-            // This is a placeholder that needs platform-specific implementation
-            
-            // For now, we'll use a simple XOR-based approach as a placeholder
-            // In a real implementation, you would link against OpenSSL or use a native crypto library
-            val keyBytes = key.encodeToByteArray()
-            val dataBytes = data.encodeToByteArray()
-            
-            // ⚠️ XOR is NOT cryptographically secure - replace before production use!
-            val result = StringBuilder()
-            for (i in dataBytes.indices) {
-                val b = dataBytes[i].toInt() xor (keyBytes[i % keyBytes.size].toInt())
-                result.append(String.format("%02x", b and 0xFF))
-            }
-            return result.toString()
-        }
-
+        // Simple URL decoding for native
         private fun urlDecode(str: String): String {
             return str.replace("+", " ")
                 .replace("%20", " ")
@@ -168,11 +144,84 @@ data class EventPayload(
         }
     }
 }
+                }
+                return Unit.right()
+            }
+            if (signatureHeader.startsWith(sha1Prefix)) {
+                val hmacHex = HmacUtils(HmacAlgorithms.HMAC_SHA_1, signatureKey).hmacHex(body)
+                if (!signatureHeader.substring(sha1Prefix.length).equals(hmacHex, ignoreCase = true)) {
+                    return RequestError.Forbidden("Invalid checksum (sha1)").left()
+                }
+                return Unit.right()
+            }
+            return RequestError.Forbidden("Unsupported algorithm").left()
+        }
+
+        fun parse(
+            contentType: ContentType,
+            body: String,
+        ): Either<RequestError, EventPayload> =
+            if (contentType.match(ContentType("application", "json"))) {
+                parseJson(body)
+            } else if (contentType.match(ContentType("application", "x-www-form-urlencoded"))) {
+                parseFormData(body)
+            } else {
+                RequestError.UnsupportedMediaType("Cannot process `$contentType` media type").left()
+            }
+
+        fun parseJson(json: String): Either<RequestError.BadInput, EventPayload> {
+            try {
+                val payload = jsonParser.decodeFromString(serializer(), json)
+                return payload.right()
+            } catch (e: SerializationException) {
+                return RequestError.BadInput("Invalid JSON", e).left()
+            } catch (e: IllegalArgumentException) {
+                return RequestError.BadInput("Invalid JSON", e).left()
+            }
+        }
+
+        fun parseFormData(body: String): Either<RequestError.BadInput, EventPayload> =
+            try {
+                val map = mutableMapOf<String, String>()
+                for (part in body.split("&")) {
+                    val values = part.split("=").map { URLDecoder.decode(it, UTF_8) }
+                    assert(values.size in 1..2)
+                    map[values[0]] = values[1] ?: ""
+                }
+                EventPayload(
+                    action = map["action"],
+                    ref = map["ref"],
+                ).right()
+            } catch (e: AssertionError) {
+                RequestError.BadInput("Invalid form-urlencoded data", null).left()
+            }
+    }
+}
 
 sealed class RequestError(
     val httpCode: Int,
-) : Exception() {
-    abstract override val message: String
+) {
+    abstract val message: String
+
+    fun toException(): Exception =
+        when (this) {
+            is BadInput ->
+                RequestException("$httpCode Bad Input — $message", exception)
+            is Forbidden ->
+                RequestException("$httpCode Forbidden — $message", null)
+            is Internal -> {
+                val metaStr = (meta ?: mapOf()).map { "\n  ${it.key}:${it.value}" }.joinToString("")
+                RequestException("$httpCode Internal Server Error — $message$metaStr", exception)
+            }
+            is NotFound ->
+                RequestException("$httpCode Not Found — $message", null)
+            is Skipped ->
+                RequestException("$httpCode Skipped — $message", null)
+            is TimedOut ->
+                RequestException("$httpCode Timed out — $message", null)
+            is UnsupportedMediaType ->
+                RequestException("$httpCode Unsupported Media Type — $message", null)
+        }
 
     data class BadInput(
         override val message: String,
@@ -187,7 +236,73 @@ sealed class RequestError(
         override val message: String,
         val exception: Exception? = null,
         val meta: Map<String, String>? = null,
-    ) : RequestError(500)
+    ) : RequestError(
+            500,
+        )
+
+    data class NotFound(
+        override val message: String,
+    ) : RequestError(404)
+
+    data class Skipped(
+        override val message: String,
+    ) : RequestError(200)
+
+    data class TimedOut(
+        override val message: String,
+    ) : RequestError(408)
+
+    data class UnsupportedMediaType(
+        override val message: String,
+    ) : RequestError(415)
+}
+
+class RequestException(
+    message: String,
+    cause: Throwable?,
+) : java.lang.Exception(message, cause)
+
+sealed class RequestError(
+    val httpCode: Int,
+) {
+    abstract val message: String
+
+    fun toException(): Exception =
+        when (this) {
+            is BadInput ->
+                RequestException("$httpCode Bad Input — $message", exception)
+            is Forbidden ->
+                RequestException("$httpCode Forbidden — $message", null)
+            is Internal -> {
+                val metaStr = (meta ?: mapOf()).map { "\n  ${it.key}:${it.value}" }.joinToString("")
+                RequestException("$httpCode Internal Server Error — $message$metaStr", exception)
+            }
+            is NotFound ->
+                RequestException("$httpCode Not Found — $message", null)
+            is Skipped ->
+                RequestException("$httpCode Skipped — $message", null)
+            is TimedOut ->
+                RequestException("$httpCode Timed out — $message", null)
+            is UnsupportedMediaType ->
+                RequestException("$httpCode Unsupported Media Type — $message", null)
+        }
+
+    data class BadInput(
+        override val message: String,
+        val exception: Exception? = null,
+    ) : RequestError(400)
+
+    data class Forbidden(
+        override val message: String,
+    ) : RequestError(403)
+
+    data class Internal(
+        override val message: String,
+        val exception: Exception? = null,
+        val meta: Map<String, String>? = null,
+    ) : RequestError(
+            500,
+        )
 
     data class NotFound(
         override val message: String,
