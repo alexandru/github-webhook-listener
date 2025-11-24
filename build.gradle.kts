@@ -15,7 +15,16 @@ repositories {
 }
 
 kotlin {
-    // Configure native targets for Linux
+    // JVM target for testing and development
+    jvm {
+        compilations.all {
+            compilerOptions.configure {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+            }
+        }
+    }
+    
+    // Native target for production
     linuxX64("native") {
         binaries {
             executable {
@@ -32,7 +41,7 @@ kotlin {
     }
 
     sourceSets {
-        val nativeMain by getting {
+        val commonMain by getting {
             dependencies {
                 // Arrow libraries with native support
                 implementation(libs.arrow.core)
@@ -56,18 +65,31 @@ kotlin {
                 // Coroutines
                 implementation(libs.kotlinx.coroutines.core)
                 
-                // Crypto for HMAC
-                implementation(libs.kcrypto)
-                
                 // Logging - using kotlin-logging with native support
                 implementation(libs.kotlin.logging)
             }
         }
+        
+        val jvmMain by getting {
+        }
 
-        val nativeTest by getting {
+        val nativeMain by getting {
+            dependencies {
+                // KCrypto only for native (not available in Maven Central, need to add repository)
+                implementation("com.soywiz:krypto:6.0.1")
+            }
+        }
+
+        val commonTest by getting {
             dependencies {
                 implementation(libs.kotlin.test)
             }
+        }
+        
+        val jvmTest by getting {
+        }
+
+        val nativeTest by getting {
         }
     }
 }

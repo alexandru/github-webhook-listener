@@ -76,8 +76,8 @@ dependencyResolutionManagement {
                 .versionRef("kotlinLogging")
             
             // Crypto for HMAC (native support)
-            version("kcrypto", "5.4.0")
-            library("kcrypto", "com.soywiz.korlibs.krypto", "krypto")
+            version("kcrypto", "6.0.1")
+            library("kcrypto", "com.soywiz.krypto", "krypto")
                 .versionRef("kcrypto")
             
             // https://github.com/ajalt/clikt

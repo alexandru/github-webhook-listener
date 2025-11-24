@@ -3,8 +3,6 @@ package org.alexn.hook
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import com.soywiz.krypto.HMAC
-import com.soywiz.krypto.encoding.Hex
 import io.ktor.http.ContentType
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -99,23 +97,6 @@ data class EventPayload(
             } catch (e: Exception) {
                 RequestError.BadInput("Invalid form-urlencoded data", null).left()
             }
-
-        // HMAC using KCrypto library with native support
-        private fun hmacSha256(data: String, key: String): String {
-            val hmac = HMAC.hmacSHA256(
-                key.encodeToByteArray(),
-                data.encodeToByteArray()
-            )
-            return Hex.encode(hmac).lowercase()
-        }
-
-        private fun hmacSha1(data: String, key: String): String {
-            val hmac = HMAC.hmacSHA1(
-                key.encodeToByteArray(),
-                data.encodeToByteArray()
-            )
-            return Hex.encode(hmac).lowercase()
-        }
 
         // Simple URL decoding for native
         private fun urlDecode(str: String): String {
@@ -260,68 +241,7 @@ sealed class RequestError(
 class RequestException(
     message: String,
     cause: Throwable?,
-) : java.lang.Exception(message, cause)
 
-sealed class RequestError(
-    val httpCode: Int,
-) {
-    abstract val message: String
-
-    fun toException(): Exception =
-        when (this) {
-            is BadInput ->
-                RequestException("$httpCode Bad Input — $message", exception)
-            is Forbidden ->
-                RequestException("$httpCode Forbidden — $message", null)
-            is Internal -> {
-                val metaStr = (meta ?: mapOf()).map { "\n  ${it.key}:${it.value}" }.joinToString("")
-                RequestException("$httpCode Internal Server Error — $message$metaStr", exception)
-            }
-            is NotFound ->
-                RequestException("$httpCode Not Found — $message", null)
-            is Skipped ->
-                RequestException("$httpCode Skipped — $message", null)
-            is TimedOut ->
-                RequestException("$httpCode Timed out — $message", null)
-            is UnsupportedMediaType ->
-                RequestException("$httpCode Unsupported Media Type — $message", null)
-        }
-
-    data class BadInput(
-        override val message: String,
-        val exception: Exception? = null,
-    ) : RequestError(400)
-
-    data class Forbidden(
-        override val message: String,
-    ) : RequestError(403)
-
-    data class Internal(
-        override val message: String,
-        val exception: Exception? = null,
-        val meta: Map<String, String>? = null,
-    ) : RequestError(
-            500,
-        )
-
-    data class NotFound(
-        override val message: String,
-    ) : RequestError(404)
-
-    data class Skipped(
-        override val message: String,
-    ) : RequestError(200)
-
-    data class TimedOut(
-        override val message: String,
-    ) : RequestError(408)
-
-    data class UnsupportedMediaType(
-        override val message: String,
-    ) : RequestError(415)
-}
-
-class RequestException(
-    message: String,
-    cause: Throwable?,
-) : Exception(message, cause)
+// Platform-specific HMAC implementations
+expect fun hmacSha256(data: String, key: String): String
+expect fun hmacSha1(data: String, key: String): String

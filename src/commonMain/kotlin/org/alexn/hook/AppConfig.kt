@@ -5,13 +5,8 @@ package org.alexn.hook
 import arrow.core.Either
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.toKString
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
-import platform.posix.fclose
-import platform.posix.fgets
-import platform.posix.fopen
 import kotlin.time.Duration
 
 @Serializable
@@ -44,12 +39,11 @@ data class AppConfig(
     )
 
     companion object {
-        @OptIn(ExperimentalForeignApi::class)
         fun parseFile(filePath: String): Either<ConfigException, AppConfig> {
             val extension = filePath.substringAfterLast('.', "").lowercase()
             
             val content = try {
-                readFile(filePath)
+                readFileContent(filePath)
             } catch (ex: Exception) {
                 return Either.Left(
                     ConfigException(
@@ -94,23 +88,6 @@ data class AppConfig(
                         strictMode = false,
                     ),
             )
-
-        @OptIn(ExperimentalForeignApi::class)
-        private fun readFile(path: String): String {
-            val file = fopen(path, "r") ?: throw Exception("Cannot open file: $path")
-            try {
-                val content = StringBuilder()
-                val buffer = ByteArray(4096)
-                while (true) {
-                    val line = fgets(buffer.refTo(0), buffer.size, file)?.toKString()
-                    if (line == null) break
-                    content.append(line)
-                }
-                return content.toString()
-            } finally {
-                fclose(file)
-            }
-        }
     }
 }
 
@@ -122,3 +99,6 @@ class ConfigException(
     message: String,
     cause: Throwable? = null,
 ) : Exception(message, cause)
+
+// Platform-specific file reading
+expect fun readFileContent(path: String): String
