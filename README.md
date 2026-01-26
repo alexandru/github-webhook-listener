@@ -176,6 +176,12 @@ Running tests:
 cargo test
 ```
 
+Checking for dependency updates:
+
+```sh
+make check-updates
+```
+
 Building for production:
 
 ```sh
