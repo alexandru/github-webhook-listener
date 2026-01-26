@@ -40,6 +40,9 @@ build-docker-local:
 run-docker: build-docker-local
 	docker run -p 8080:8080 -ti ${LATEST}
 
+check-updates:
+	cargo outdated
+
 clean:
 	cargo clean
 	rm -rf target/
