@@ -27,3 +27,20 @@ jobs:
 
       - name: Run Tests
         run: ./gradlew check
+
+  native-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm-community'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: 'gradle'
+
+      - name: Run native executable smoke test
+        run: ./gradlew nativeSmokeTest --no-daemon

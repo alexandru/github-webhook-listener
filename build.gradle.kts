@@ -33,8 +33,6 @@ graalvmNative {
     // https://graalvm.github.io/native-build-tools/latest/gradle-plugin.html#metadata-support
     metadataRepository {
         enabled = true
-        // https://github.com/oracle/graalvm-reachability-metadata/releases/
-        version = "0.3.7"
     }
 
     binaries {
@@ -131,5 +129,30 @@ tasks {
 ktor {
     fatJar {
         archiveFileName.set("github-webhook-listener-fat.jar")
+    }
+}
+
+val nativeExecutable = layout.buildDirectory.file("native/nativeCompile/github-webhook-listener")
+val nativeSmokeTestScript = layout.projectDirectory.file("scripts/native-smoke-test.py")
+
+tasks.register<Exec>("nativeSmokeTest") {
+    group = "verification"
+    description = "Runs HTTP smoke tests against the production native executable"
+    dependsOn(tasks.named("nativeCompile"))
+
+    inputs.file(nativeExecutable)
+    inputs.file(nativeSmokeTestScript)
+    outputs.upToDateWhen { false }
+
+    doFirst {
+        val executableFile = nativeExecutable.get().asFile
+        check(executableFile.isFile) {
+            "Native executable not found: ${executableFile.absolutePath}"
+        }
+        commandLine(
+            "python3",
+            nativeSmokeTestScript.asFile.absolutePath,
+            executableFile.absolutePath,
+        )
     }
 }
