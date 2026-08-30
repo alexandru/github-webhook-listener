@@ -43,3 +43,7 @@ run-docker: build-docker-local
 clean:
 	cargo clean
 	rm -rf target/
+
+update-dependencies:
+	cargo install cargo-edit
+	cargo upgrade -i allow && cargo update
