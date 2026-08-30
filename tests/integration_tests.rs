@@ -1,5 +1,5 @@
 use github_webhook_listener::{AppConfig, server::start_server};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use reqwest::{Client, StatusCode};
 use sha1::Sha1;
 use sha2::Sha256;

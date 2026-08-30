@@ -1,6 +1,6 @@
 use crate::config::ProjectConfig;
 use crate::error::{AppError, Result};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::Sha256;
@@ -69,9 +69,9 @@ fn verify_hmac_with_algorithm<M>(
     algorithm: &str,
 ) -> Result<()>
 where
-    M: Mac + hmac::digest::KeyInit,
+    M: Mac + KeyInit,
 {
-    let mut mac = <M as Mac>::new_from_slice(secret.as_bytes())
+    let mut mac = <M as KeyInit>::new_from_slice(secret.as_bytes())
         .map_err(|e| AppError::Internal(format!("Invalid secret key: {}", e)))?;
 
     mac.update(body.as_bytes());
