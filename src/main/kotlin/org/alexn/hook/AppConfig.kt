@@ -45,14 +45,21 @@ data class AppConfig(
     companion object {
         fun parseFile(file: File) =
             when (file.extension.lowercase()) {
-                "hocon", "conf" -> parseHocon(file)
-                "yaml", "yml" -> parseYaml(file)
-                else ->
+                "hocon", "conf" -> {
+                    parseHocon(file)
+                }
+
+                "yaml", "yml" -> {
+                    parseYaml(file)
+                }
+
+                else -> {
                     Either.Left(
                         ConfigException(
                             "Unsupported configuration file format: ${file.extension}",
                         ),
                     )
+                }
             }
 
         fun parseHocon(string: String): Either<ConfigException, AppConfig> =

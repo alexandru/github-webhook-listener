@@ -109,22 +109,34 @@ sealed class RequestError(
 
     fun toException(): Exception =
         when (this) {
-            is BadInput ->
+            is BadInput -> {
                 RequestException("$httpCode Bad Input — $message", exception)
-            is Forbidden ->
+            }
+
+            is Forbidden -> {
                 RequestException("$httpCode Forbidden — $message", null)
+            }
+
             is Internal -> {
                 val metaStr = (meta ?: mapOf()).map { "\n  ${it.key}:${it.value}" }.joinToString("")
                 RequestException("$httpCode Internal Server Error — $message$metaStr", exception)
             }
-            is NotFound ->
+
+            is NotFound -> {
                 RequestException("$httpCode Not Found — $message", null)
-            is Skipped ->
+            }
+
+            is Skipped -> {
                 RequestException("$httpCode Skipped — $message", null)
-            is TimedOut ->
+            }
+
+            is TimedOut -> {
                 RequestException("$httpCode Timed out — $message", null)
-            is UnsupportedMediaType ->
+            }
+
+            is UnsupportedMediaType -> {
                 RequestException("$httpCode Unsupported Media Type — $message", null)
+            }
         }
 
     data class BadInput(

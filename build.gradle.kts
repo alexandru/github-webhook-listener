@@ -65,6 +65,10 @@ repositories {
     mavenCentral()
 }
 
+ktlint {
+    version.set(libs.versions.ktlintCli)
+}
+
 dependencies {
     implementation(libs.arrow.core)
     implementation(libs.arrow.fx.coroutines)

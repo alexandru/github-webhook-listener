@@ -115,12 +115,15 @@ fun Application.configureRouting(
                     call.respondText("OK", status = HttpStatusCode.OK)
                     logger.info("POST /$projectKey — OK")
                 }
+
                 is Either.Left -> {
                     val err = response.value
                     call.respondText(err.message, status = HttpStatusCode.fromValue(err.httpCode))
                     when (err) {
-                        is RequestError.Skipped ->
+                        is RequestError.Skipped -> {
                             logger.info("POST /$projectKey — Skipped")
+                        }
+
                         else -> {
                             val ex = err.toException()
                             logger.warn("POST /$projectKey — ${ex.message}", ex.cause)
