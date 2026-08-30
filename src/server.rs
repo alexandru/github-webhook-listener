@@ -143,8 +143,3 @@ async fn handle_webhook(
 
     Ok((StatusCode::OK, "OK").into_response())
 }
-
-#[cfg(test)]
-mod tests {
-    // Note: html_escape test removed as escaping is now handled by Askama template engine
-}
