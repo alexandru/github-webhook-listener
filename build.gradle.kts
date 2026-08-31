@@ -67,6 +67,12 @@ ktlint {
     version.set(libs.versions.ktlintCli)
 }
 
+val nativeSmokeTestSourceSet = sourceSets.create("nativeSmokeTest")
+configurations[nativeSmokeTestSourceSet.implementationConfigurationName]
+    .extendsFrom(configurations.testImplementation.get())
+configurations[nativeSmokeTestSourceSet.runtimeOnlyConfigurationName]
+    .extendsFrom(configurations.testRuntimeOnly.get())
+
 dependencies {
     implementation(libs.arrow.core)
     implementation(libs.arrow.fx.coroutines)
@@ -78,15 +84,19 @@ dependencies {
     implementation(libs.kaml)
     implementation(libs.kotlin.logging)
     implementation(libs.kotlin.stdlib.jdk8)
-    implementation(libs.kotlin.test.junit)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.serialization.hocon)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cio)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.html.builder)
-    implementation(libs.ktor.server.tests.jvm)
     implementation(libs.logback.classic)
+
+    testImplementation(libs.junit.jupiter.api)
+    testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.ktor.server.test.host.jvm)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 // kotlin {
@@ -123,6 +133,7 @@ tasks {
     }
 
     test {
+        useJUnitPlatform()
     }
 }
 
@@ -133,15 +144,16 @@ ktor {
 }
 
 val nativeExecutable = layout.buildDirectory.file("native/nativeCompile/github-webhook-listener")
-val nativeSmokeTestScript = layout.projectDirectory.file("scripts/native-smoke-test.py")
-
-tasks.register<Exec>("nativeSmokeTest") {
+tasks.register<Test>("nativeSmokeTest") {
     group = "verification"
     description = "Runs HTTP smoke tests against the production native executable"
     dependsOn(tasks.named("nativeCompile"))
 
+    testClassesDirs = nativeSmokeTestSourceSet.output.classesDirs
+    classpath = nativeSmokeTestSourceSet.runtimeClasspath
+    useJUnitPlatform()
+
     inputs.file(nativeExecutable)
-    inputs.file(nativeSmokeTestScript)
     outputs.upToDateWhen { false }
 
     doFirst {
@@ -149,10 +161,6 @@ tasks.register<Exec>("nativeSmokeTest") {
         check(executableFile.isFile) {
             "Native executable not found: ${executableFile.absolutePath}"
         }
-        commandLine(
-            "python3",
-            nativeSmokeTestScript.asFile.absolutePath,
-            executableFile.absolutePath,
-        )
+        systemProperty("native.executable", executableFile.absolutePath)
     }
 }
