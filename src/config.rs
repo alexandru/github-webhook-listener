@@ -168,4 +168,5 @@ impl AppConfig {
 }
 
 #[cfg(test)]
+#[path = "../unit-tests/config.rs"]
 mod tests;

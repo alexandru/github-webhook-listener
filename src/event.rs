@@ -86,4 +86,5 @@ where
 }
 
 #[cfg(test)]
+#[path = "../unit-tests/event.rs"]
 mod tests;

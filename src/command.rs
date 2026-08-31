@@ -149,4 +149,5 @@ async fn execute_shell_command(command: &str, directory: &str) -> Result<Command
 }
 
 #[cfg(test)]
+#[path = "../unit-tests/command.rs"]
 mod tests;
