@@ -1,10 +1,12 @@
+//! HTTP server, routing, and the background worker that runs queued commands.
+
 use crate::command::CommandTrigger;
 use crate::config::AppConfig;
 use crate::error::{AppError, Result};
 use crate::event::EventPayload;
 use askama::Template;
 use axum::{
-    Router,
+    Json, Router,
     body::Bytes,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
@@ -30,7 +32,27 @@ pub struct AppState {
     command_queue: Sender<String>,
 }
 
+/// Binds the configured address and serves the webhook routes.
+///
+/// # Errors
+///
+/// Returns [`AppError::Internal`] when the base path is invalid, the address
+/// cannot be bound, or the server stops with an error.
 pub async fn start_server(config: AppConfig) -> Result<()> {
+    let base_path = config.http.base_path();
+    if !base_path.is_empty() && !base_path.starts_with('/') {
+        return Err(AppError::Internal(format!(
+            "http base path must start with `/`: {}",
+            base_path
+        )));
+    }
+    if base_path.contains(['{', '}', '*']) {
+        return Err(AppError::Internal(format!(
+            "http base path must not contain route parameters or wildcards: {}",
+            base_path
+        )));
+    }
+
     let command_trigger = Arc::new(CommandTrigger::new(config.projects.clone()));
     let command_queue = start_command_worker(command_trigger);
     let state = AppState {
@@ -38,7 +60,6 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
         command_queue,
     };
 
-    let base_path = config.http.base_path();
     let app = routes(&base_path).with_state(state);
 
     let addr = config.http.bind_address();
@@ -46,11 +67,11 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
 
     let listener = TcpListener::bind(&addr)
         .await
-        .map_err(|e| AppError::Internal(format!("Failed to bind to {}: {}", addr, e)))?;
+        .map_err(|e| AppError::Internal(format!("failed to bind to {}: {}", addr, e)))?;
 
     axum::serve(listener, app)
         .await
-        .map_err(|e| AppError::Internal(format!("Server error: {}", e)))?;
+        .map_err(|e| AppError::Internal(format!("server error: {}", e)))?;
 
     Ok(())
 }
@@ -133,15 +154,29 @@ fn routes(base_path: &str) -> Router<AppState> {
     router
 }
 
-async fn list_projects(State(state): State<AppState>) -> Html<String> {
-    let projects: Vec<String> = state.config.projects.keys().cloned().collect();
+async fn list_projects(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let mut projects: Vec<String> = state.config.projects.keys().cloned().collect();
+    projects.sort_unstable();
+
+    let accepts_json = headers.get_all("accept").iter().any(|value| {
+        value.to_str().is_ok_and(|accept| {
+            accept.split(',').any(|media_type| {
+                media_type.split(';').next().is_some_and(|type_name| {
+                    type_name.trim().eq_ignore_ascii_case("application/json")
+                })
+            })
+        })
+    });
+    if accepts_json {
+        return Json(projects).into_response();
+    }
 
     let template = ProjectsTemplate { projects };
-    Html(
-        template
-            .render()
-            .unwrap_or_else(|_| "Error rendering template".to_string()),
-    )
+    Html(template.render().unwrap_or_else(|error| {
+        warn!("Failed to render template: {}", error);
+        "error rendering template".to_string()
+    }))
+    .into_response()
 }
 
 async fn handle_webhook(
@@ -152,11 +187,11 @@ async fn handle_webhook(
 ) -> Result<Response> {
     let project =
         state.config.projects.get(&project_key).ok_or_else(|| {
-            AppError::NotFound(format!("Project `{}` does not exist", project_key))
+            AppError::NotFound(format!("project `{}` does not exist", project_key))
         })?;
 
     let body_str = std::str::from_utf8(&body)
-        .map_err(|_| AppError::BadRequest("Invalid UTF-8 in request body".to_string()))?;
+        .map_err(|_| AppError::BadRequest("invalid UTF-8 in request body".to_string()))?;
 
     let signature = headers
         .get("x-hub-signature-256")
@@ -176,7 +211,7 @@ async fn handle_webhook(
         EventPayload::from_form(body_str)?
     } else {
         return Err(AppError::UnsupportedMediaType(format!(
-            "Cannot process `{}` media type",
+            "cannot process `{}` media type",
             content_type
         )));
     };

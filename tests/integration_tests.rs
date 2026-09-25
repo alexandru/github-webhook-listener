@@ -98,6 +98,52 @@ async fn test_root_endpoint() -> TestResult<()> {
 }
 
 #[tokio::test]
+async fn project_listing_negotiates_json_without_changing_html() -> TestResult<()> {
+    let project = ProjectConfig {
+        git_ref: "refs/heads/main".to_string(),
+        directory: "/tmp".to_string(),
+        command: "true".to_string(),
+        secret: "secret".to_string(),
+        action: None,
+        timeout: None,
+    };
+    let url = start_test_server(AppConfig {
+        http: HttpConfig {
+            port: 0,
+            host: Some("127.0.0.1".to_string()),
+            path: Some("/hooks".to_string()),
+        },
+        projects: [
+            ("monix".to_string(), project.clone()),
+            ("alexn".to_string(), project),
+        ]
+        .into(),
+    })
+    .await?;
+    let client = Client::new();
+    let html = client.get(format!("{url}/hooks/")).send().await?;
+    assert_eq!(html.status(), StatusCode::OK);
+    assert_eq!(html.headers()["content-type"], "text/html; charset=utf-8");
+    let html_body = html.text().await?;
+    let explicit_html = client
+        .get(format!("{url}/hooks/"))
+        .header("Accept", "text/html")
+        .send()
+        .await?;
+    assert_eq!(explicit_html.text().await?, html_body);
+
+    let json = client
+        .get(format!("{url}/hooks/"))
+        .header("Accept", "application/json")
+        .send()
+        .await?;
+    assert_eq!(json.status(), StatusCode::OK);
+    assert_eq!(json.headers()["content-type"], "application/json");
+    assert_eq!(json.text().await?, r#"["alexn","monix"]"#);
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_webhook_with_sha256_authentication() -> TestResult<()> {
     let temp_dir = TempDir::new()?;
     let dir_path = temp_dir
@@ -516,5 +562,24 @@ async fn failed_command_does_not_stop_worker_or_expose_output() -> TestResult<()
 
     wait_for_file(&temp_dir.path().join("recovered")).await?;
     assert!(temp_dir.path().join("failed-started").exists());
+    Ok(())
+}
+
+#[tokio::test]
+async fn invalid_base_path_is_rejected() -> TestResult<()> {
+    for path in ["hooks", "/hooks{", "/{project}", "/hooks*"] {
+        let config = AppConfig {
+            http: HttpConfig {
+                port: 0,
+                host: Some("127.0.0.1".to_string()),
+                path: Some(path.to_string()),
+            },
+            projects: HashMap::new(),
+        };
+
+        let result = github_webhook_listener::server::start_server(config).await;
+
+        assert!(result.is_err(), "path `{path}` should be rejected");
+    }
     Ok(())
 }

@@ -1,3 +1,5 @@
+//! Configuration types and loaders for YAML and HOCON files.
+
 use crate::error::{AppError, Result as AppResult};
 use hocon_rs::Config as HoconConfig;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -6,22 +8,30 @@ use std::fs;
 use std::path::Path;
 use std::time::Duration;
 
+/// Configuration for the listener, loaded from a YAML or HOCON file.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AppConfig {
+    /// HTTP listener settings.
     pub http: HttpConfig,
+    /// Commands to run, keyed by the project name used in the webhook URL.
     pub projects: HashMap<String, ProjectConfig>,
 }
 
+/// HTTP listener settings.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct HttpConfig {
+    /// TCP port to listen on.
     pub port: u16,
+    /// Interface to bind, defaulting to `0.0.0.0`.
     #[serde(default, deserialize_with = "option_string")]
     pub host: Option<String>,
+    /// Base path prefixed to the webhook routes, defaulting to the root.
     #[serde(default, deserialize_with = "option_string")]
     pub path: Option<String>,
 }
 
 impl HttpConfig {
+    /// Returns the configured base path without a trailing slash.
     pub fn base_path(&self) -> String {
         let path = self.path.as_deref().unwrap_or("");
         if path.ends_with('/') {
@@ -31,6 +41,7 @@ impl HttpConfig {
         }
     }
 
+    /// Returns the `host:port` address the server binds to.
     pub fn bind_address(&self) -> String {
         format!(
             "{}:{}",
@@ -40,74 +51,99 @@ impl HttpConfig {
     }
 }
 
+/// Command to run for one project, plus the conditions that trigger it.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProjectConfig {
+    /// Git ref that triggers the command, such as `refs/heads/main`.
     #[serde(rename = "ref")]
     pub git_ref: String,
+    /// Working directory for the command.
     pub directory: String,
+    /// Shell command to run through `/bin/sh -c`.
     pub command: String,
+    /// Secret used to verify the GitHub HMAC signature.
     pub secret: String,
+    /// Action that triggers the command, defaulting to `push`.
     #[serde(default, deserialize_with = "option_string")]
     pub action: Option<String>,
+    /// Command timeout, defaulting to 30 seconds.
     #[serde(default, deserialize_with = "duration_serde::deserialize")]
     pub timeout: Option<Duration>,
 }
 
 impl ProjectConfig {
+    /// Returns the action that triggers this project, defaulting to `push`.
     pub fn action_filter(&self) -> &str {
         self.action.as_deref().unwrap_or("push")
     }
 
+    /// Returns the command timeout, defaulting to 30 seconds.
     pub fn timeout_duration(&self) -> Duration {
         self.timeout.unwrap_or(Duration::from_secs(30))
     }
 }
 
 impl AppConfig {
-    /// Load configuration from a file, auto-detecting the format based on
-    /// extension
+    /// Loads configuration from a file, detecting YAML or HOCON from the file
+    /// extension.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the file cannot be read or parsed.
     pub fn from_file<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let path = path.as_ref();
         let contents = fs::read_to_string(path)?;
 
-        // Auto-detect format based on file extension
         if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
             match ext {
                 "yaml" | "yml" => Self::from_yaml_str(&contents),
                 "conf" | "hocon" => Self::from_hocon_str(&contents),
-                _ => {
-                    // Try YAML first, then HOCON
-                    Self::from_yaml_str(&contents).or_else(|_| Self::from_hocon_str(&contents))
-                }
+                _ => Self::from_yaml_str(&contents).or_else(|_| Self::from_hocon_str(&contents)),
             }
         } else {
-            // No extension, try both formats
             Self::from_yaml_str(&contents).or_else(|_| Self::from_hocon_str(&contents))
         }
     }
 
     /// Parses YAML configuration directly. Prefer `from_file`, which detects
     /// the format from the file extension.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the file cannot be read or the YAML is invalid.
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let contents = fs::read_to_string(path)?;
         Self::from_yaml_str(&contents)
     }
 
+    /// Parses YAML text into a configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the YAML is invalid.
     pub fn from_yaml_str(yaml: &str) -> AppResult<Self> {
         let config: AppConfig = serde_yaml::from_str(yaml)?;
         Ok(config)
     }
 
-    /// Parse HOCON configuration
+    /// Parses a HOCON configuration file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the file cannot be read or the HOCON is invalid.
     pub fn from_hocon_file<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let contents = fs::read_to_string(path)?;
         Self::from_hocon_str(&contents)
     }
 
+    /// Parses HOCON text into a configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the HOCON is invalid.
     pub fn from_hocon_str(hocon: &str) -> AppResult<Self> {
-        // Parse HOCON and deserialize directly with serde
         let config: AppConfig = HoconConfig::parse_str(hocon, None)
-            .map_err(|e| AppError::Internal(format!("HOCON parse error: {}", e)))?;
+            .map_err(|e| AppError::Internal(format!("hocon parse error: {}", e)))?;
         Ok(config)
     }
 }
@@ -160,14 +196,21 @@ mod duration_serde {
                 if let Ok(duration) = humantime::parse_duration(&s) {
                     return Ok(Some(duration));
                 }
-                // Try ISO 8601 format (e.g., "PT5S", "PT30S")
+                // Try ISO 8601 format (e.g., "PT5S", "PT0.5S")
                 if let Ok(duration) = IsoDuration::parse(&s) {
-                    let seconds = duration.num_seconds().unwrap_or(0.0).max(0.0) as u64;
-                    let std_duration = Duration::from_secs(seconds);
-                    return Ok(Some(std_duration));
+                    return match duration
+                        .num_seconds()
+                        .and_then(|seconds| Duration::try_from_secs_f64(seconds.into()).ok())
+                    {
+                        Some(timeout) => Ok(Some(timeout)),
+                        None => Err(DeError::custom(format!(
+                            "cannot convert ISO 8601 duration to a timeout: {}",
+                            s
+                        ))),
+                    };
                 }
                 Err(DeError::custom(format!(
-                    "Invalid duration format: {}. Expected humantime (e.g., '5s') or ISO 8601 (e.g., 'PT5S')",
+                    "invalid duration format: {}; expected humantime (e.g., '5s') or ISO 8601 (e.g., 'PT5S')",
                     s
                 )))
             }

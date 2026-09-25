@@ -119,3 +119,31 @@ projects:
     assert_eq!(project.timeout_duration(), Duration::from_secs(5));
     Ok(())
 }
+
+#[test]
+fn test_parse_fractional_iso8601_duration() -> TestResult<()> {
+    let hocon = r#"
+http {
+  host: "0.0.0.0"
+  port: 8080
+  path: "/"
+}
+
+projects {
+  myproject {
+    ref: "refs/heads/gh-pages"
+    directory: "/tmp"
+    command: "touch ./i-was-here.txt"
+    timeout: "PT0.5S"
+    secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+}
+"#;
+    let config = AppConfig::from_hocon_str(hocon)?;
+    let project = config
+        .projects
+        .get("myproject")
+        .ok_or_else(|| anyhow!("missing myproject configuration"))?;
+    assert_eq!(project.timeout_duration(), Duration::from_millis(500));
+    Ok(())
+}

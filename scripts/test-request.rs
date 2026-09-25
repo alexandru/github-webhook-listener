@@ -4,7 +4,7 @@
 edition = "2024"
 
 [dependencies]
-reqwest = { version = "0.12", features = ["blocking"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking"] }
 hmac = "0.12"
 sha1 = "0.10"
 sha2 = "0.10"
@@ -47,13 +47,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let client = Client::new();
 
-    // Test 1: GET request to root
     println!("Test 1: GET /");
     let response = client.get("http://localhost:8080/").send()?;
     println!("HTTP {}: {}", response.status(), response.text()?);
     println!();
 
-    // Test 2: POST with SHA256 signature
     println!("Test 2: POST /myproject with SHA256");
     let signature_sha256 = generate_hmac_sha256(body_text, sign_key)?;
     let response = client
@@ -65,7 +63,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("HTTP {}: {}", response.status(), response.text()?);
     println!();
 
-    // Test 3: POST with SHA1 signature
     println!("Test 3: POST /myproject with SHA1");
     let signature_sha1 = generate_hmac_sha1(body_text, sign_key)?;
     let response = client
@@ -77,7 +74,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("HTTP {}: {}", response.status(), response.text()?);
     println!();
 
-    // Test 4: POST to non-existent project
     println!("Test 4: POST /notAvailable");
     let signature = generate_hmac_sha1(body_text, sign_key)?;
     let response = client

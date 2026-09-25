@@ -151,7 +151,23 @@ async fn command_with_full_stderr_pipe_can_complete() -> TestResult<()> {
 }
 
 #[tokio::test]
-async fn command_failure_limits_captured_output() -> TestResult<()> {
+async fn command_output_is_capped() -> TestResult<()> {
+    let temp_dir = TempDir::new()?;
+    let dir_path = temp_dir
+        .path()
+        .to_str()
+        .ok_or_else(|| anyhow!("temporary directory path is not valid UTF-8"))?;
+
+    let result = execute_shell_command("head -c 131072 /dev/zero >&2; exit 1", dir_path).await?;
+
+    assert!(!result.is_successful());
+    assert!(result.stderr.len() < 70 * 1024);
+    assert!(result.stderr.contains("[output truncated]"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn command_failure_does_not_expose_output() -> TestResult<()> {
     let temp_dir = TempDir::new()?;
     let mut projects = HashMap::new();
     projects.insert(
@@ -163,7 +179,7 @@ async fn command_failure_limits_captured_output() -> TestResult<()> {
                 .to_str()
                 .ok_or_else(|| anyhow!("temporary directory path is not valid UTF-8"))?
                 .to_string(),
-            command: "head -c 131072 /dev/zero >&2; exit 1".to_string(),
+            command: "echo private-output >&2; exit 1".to_string(),
             secret: "secret".to_string(),
             action: None,
             timeout: Some(Duration::from_secs(2)),
@@ -176,7 +192,7 @@ async fn command_failure_limits_captured_output() -> TestResult<()> {
         .err()
         .ok_or_else(|| anyhow!("expected command to fail"))?
         .to_string();
-    assert!(error.len() < 70 * 1024);
-    assert!(error.contains("[output truncated]"));
+
+    assert!(!error.contains("private-output"));
     Ok(())
 }

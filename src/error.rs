@@ -1,3 +1,5 @@
+//! Error type shared across the crate, with its HTTP status mapping.
+
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -9,38 +11,40 @@ use std::io::Error as IoError;
 use std::result::Result as StdResult;
 use thiserror::Error;
 
+/// Result type used across the crate, with [`AppError`] as the error.
 pub type Result<T> = StdResult<T, AppError>;
 
+/// Errors produced by the listener. Each variant maps to an HTTP status.
 #[derive(Debug, Error)]
 pub enum AppError {
-    #[error("IO error: {0}")]
+    #[error("io error: {0}")]
     Io(#[from] IoError),
 
-    #[error("YAML parse error: {0}")]
+    #[error("yaml parse error: {0}")]
     Yaml(#[from] YamlError),
 
-    #[error("JSON parse error: {0}")]
+    #[error("json parse error: {0}")]
     Json(#[from] JsonError),
 
-    #[error("URL-encoded parse error: {0}")]
+    #[error("url-encoded parse error: {0}")]
     UrlEncoded(#[from] UrlEncodedError),
 
-    #[error("Bad request: {0}")]
+    #[error("bad request: {0}")]
     BadRequest(String),
 
-    #[error("Forbidden: {0}")]
+    #[error("forbidden: {0}")]
     Forbidden(String),
 
-    #[error("Not found: {0}")]
+    #[error("not found: {0}")]
     NotFound(String),
 
-    #[error("Internal error: {0}")]
+    #[error("internal error: {0}")]
     Internal(String),
 
-    #[error("Timeout: {0}")]
+    #[error("timeout: {0}")]
     Timeout(String),
 
-    #[error("Unsupported media type: {0}")]
+    #[error("unsupported media type: {0}")]
     UnsupportedMediaType(String),
 }
 
@@ -48,20 +52,26 @@ pub enum AppError {
 /// sender.
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, message) = match &self {
-            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, format!("Bad request: {}", msg)),
-            AppError::Json(e) => (StatusCode::BAD_REQUEST, format!("Invalid JSON: {}", e)),
-            AppError::UrlEncoded(e) => {
-                (StatusCode::BAD_REQUEST, format!("Invalid form data: {}", e))
-            }
-            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg.clone()),
-            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg.clone()),
-            AppError::Timeout(msg) => (StatusCode::REQUEST_TIMEOUT, msg.clone()),
-            AppError::UnsupportedMediaType(msg) => {
-                (StatusCode::UNSUPPORTED_MEDIA_TYPE, msg.clone())
-            }
-            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+        let (status, message) = match self {
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, format!("bad request: {msg}")),
+            AppError::Json(error) => (StatusCode::BAD_REQUEST, format!("invalid JSON: {error}")),
+            AppError::UrlEncoded(error) => (
+                StatusCode::BAD_REQUEST,
+                format!("invalid form data: {error}"),
+            ),
+            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            AppError::Timeout(msg) => (StatusCode::REQUEST_TIMEOUT, msg),
+            AppError::UnsupportedMediaType(msg) => (StatusCode::UNSUPPORTED_MEDIA_TYPE, msg),
+            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            AppError::Io(error) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("io error: {error}"),
+            ),
+            AppError::Yaml(error) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("yaml parse error: {error}"),
+            ),
         };
 
         (status, message).into_response()

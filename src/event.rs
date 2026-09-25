@@ -1,3 +1,5 @@
+//! GitHub webhook payload parsing and signature verification.
+
 use crate::config::ProjectConfig;
 use crate::error::{AppError, Result};
 use hmac::{Hmac, KeyInit, Mac};
@@ -5,21 +7,32 @@ use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use sha2::Sha256;
 
-/// GitHub webhook event payload containing action and git ref information
+/// GitHub webhook event payload containing action and git ref information.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EventPayload {
+    /// Webhook action, such as `push`. A missing action counts as `push`.
     pub action: Option<String>,
+    /// Git ref the event applies to, such as `refs/heads/main`.
     #[serde(rename = "ref")]
     pub git_ref: Option<String>,
 }
 
 impl EventPayload {
+    /// Parses a JSON webhook body.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the body is not valid JSON.
     pub fn from_json(json: &str) -> Result<Self> {
         Ok(serde_json::from_str(json)?)
     }
 
     /// Parses a GitHub form-encoded delivery, which wraps the JSON body in a
     /// `payload` field.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the form data or its `payload` field is invalid.
     pub fn from_form(form_data: &str) -> Result<Self> {
         #[derive(Deserialize)]
         struct GithubForm {
@@ -39,13 +52,18 @@ impl EventPayload {
     }
 
     /// Verifies the GitHub HMAC signature over the raw request body.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AppError::Forbidden`] when the signature is missing,
+    /// malformed, or does not match.
     pub fn verify_signature(
         body: &str,
         secret: &str,
         signature_header: Option<&str>,
     ) -> Result<()> {
         let signature = signature_header
-            .ok_or_else(|| AppError::Forbidden("No signature header was provided".to_string()))?;
+            .ok_or_else(|| AppError::Forbidden("no signature header was provided".to_string()))?;
 
         if let Some(sig) = signature.strip_prefix("sha256=") {
             verify_hmac_sha256(body, secret, sig)
@@ -53,7 +71,7 @@ impl EventPayload {
             verify_hmac_sha1(body, secret, sig)
         } else {
             Err(AppError::Forbidden(
-                "Unsupported signature algorithm".to_string(),
+                "unsupported signature algorithm".to_string(),
             ))
         }
     }
@@ -79,15 +97,15 @@ where
     M: Mac + KeyInit,
 {
     let mut mac = <M as KeyInit>::new_from_slice(secret.as_bytes())
-        .map_err(|e| AppError::Internal(format!("Invalid secret key: {}", e)))?;
+        .map_err(|e| AppError::Internal(format!("invalid secret key: {}", e)))?;
 
     mac.update(body.as_bytes());
 
     let expected = hex::decode(expected_hex)
-        .map_err(|_| AppError::Forbidden("Invalid signature format".to_string()))?;
+        .map_err(|_| AppError::Forbidden("invalid signature format".to_string()))?;
 
     mac.verify_slice(&expected)
-        .map_err(|_| AppError::Forbidden(format!("Invalid checksum ({})", algorithm)))?;
+        .map_err(|_| AppError::Forbidden(format!("invalid checksum ({})", algorithm)))?;
 
     Ok(())
 }
