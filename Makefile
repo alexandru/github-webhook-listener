@@ -44,6 +44,10 @@ clean:
 	cargo clean
 	rm -rf target/
 
+format:
+	cargo +nightly fmt --all
+
 update-dependencies:
 	cargo install cargo-edit
 	cargo upgrade -i allow && cargo update
+
