@@ -44,6 +44,7 @@ pub enum AppError {
     UnsupportedMediaType(String),
 }
 
+/// Maps each error to the HTTP status and message returned to the webhook sender.
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {

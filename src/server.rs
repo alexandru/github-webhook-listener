@@ -9,21 +9,20 @@ use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Response},
-    routing::{get, post},
-    serve,
+    routing::get,
 };
-use std::str::from_utf8;
 use std::sync::Arc;
 use tokio::{
     net::TcpListener,
     spawn,
     sync::{
         Mutex,
-        mpsc::{Sender, channel, error::TrySendError},
+        mpsc::{self, Sender, error::TrySendError},
     },
 };
 use tracing::{error, info, warn};
 
+/// State shared by the HTTP handlers: the loaded configuration and the command queue.
 #[derive(Clone)]
 pub struct AppState {
     pub config: AppConfig,
@@ -48,13 +47,14 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
         .await
         .map_err(|e| AppError::Internal(format!("Failed to bind to {}: {}", addr, e)))?;
 
-    serve(listener, app)
+    axum::serve(listener, app)
         .await
         .map_err(|e| AppError::Internal(format!("Server error: {}", e)))?;
 
     Ok(())
 }
 
+/// Maximum commands waiting in the queue. New deliveries get 503 when it is full.
 const QUEUE_CAPACITY: usize = 64;
 
 #[derive(Template)]
@@ -63,8 +63,9 @@ struct ProjectsTemplate {
     projects: Vec<String>,
 }
 
+/// Spawns the single worker that runs queued commands one at a time. The supervisor restarts the worker if it panics.
 fn start_command_worker(trigger: Arc<CommandTrigger>) -> Sender<String> {
-    let (sender, receiver) = channel::<String>(QUEUE_CAPACITY);
+    let (sender, receiver) = mpsc::channel::<String>(QUEUE_CAPACITY);
     let receiver = Arc::new(Mutex::new(receiver));
 
     spawn(async move {
@@ -119,9 +120,11 @@ fn routes(base_path: &str) -> Router<AppState> {
         );
     }
 
-    // Main routes
     router = router.route(&format!("{}/", base_path), get(list_projects));
-    router = router.route(&format!("{}/{{project}}", base_path), post(handle_webhook));
+    router = router.route(
+        &format!("{}/{{project}}", base_path),
+        axum::routing::post(handle_webhook),
+    );
 
     router
 }
@@ -143,17 +146,14 @@ async fn handle_webhook(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<Response> {
-    // Get the project config
     let project =
         state.config.projects.get(&project_key).ok_or_else(|| {
             AppError::NotFound(format!("Project `{}` does not exist", project_key))
         })?;
 
-    // Get body as string
-    let body_str = from_utf8(&body)
+    let body_str = std::str::from_utf8(&body)
         .map_err(|_| AppError::BadRequest("Invalid UTF-8 in request body".to_string()))?;
 
-    // Verify signature
     let signature = headers
         .get("x-hub-signature-256")
         .or_else(|| headers.get("x-hub-signature"))
@@ -161,7 +161,6 @@ async fn handle_webhook(
 
     EventPayload::verify_signature(body_str, &project.secret, signature)?;
 
-    // Parse the payload based on content type
     let content_type = headers
         .get("content-type")
         .and_then(|v| v.to_str().ok())
@@ -178,7 +177,6 @@ async fn handle_webhook(
         )));
     };
 
-    // Check if we should process this payload
     if !payload.should_process(project) {
         info!("POST /{} — Skipped (ref or action mismatch)", project_key);
         return Ok((StatusCode::OK, "Nothing to do").into_response());

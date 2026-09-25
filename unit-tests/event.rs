@@ -1,7 +1,6 @@
 use super::*;
 use crate::config::ProjectConfig;
 use anyhow::{Result as TestResult, anyhow};
-use hex::encode;
 use std::time::Duration;
 
 fn test_project() -> ProjectConfig {
@@ -51,7 +50,7 @@ fn test_verify_signature_sha256() -> TestResult<()> {
         .map_err(|error| anyhow!("invalid HMAC key: {error}"))?;
     mac.update(body.as_bytes());
     let result = mac.finalize();
-    let actual_sig = format!("sha256={}", encode(result.into_bytes()));
+    let actual_sig = format!("sha256={}", hex::encode(result.into_bytes()));
 
     // Test with correct signature
     EventPayload::verify_signature(body, secret, Some(&actual_sig))?;

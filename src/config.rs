@@ -1,7 +1,6 @@
 use crate::error::{AppError, Result as AppResult};
 use hocon_rs::Config as HoconConfig;
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_yaml::from_str as from_yaml_str;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -86,14 +85,14 @@ impl AppConfig {
         }
     }
 
-    /// Parse YAML configuration (deprecated, use from_file)
+    /// Parses YAML configuration directly. Prefer `from_file`, which detects the format from the file extension.
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let contents = fs::read_to_string(path)?;
         Self::from_yaml_str(&contents)
     }
 
     pub fn from_yaml_str(yaml: &str) -> AppResult<Self> {
-        let config: AppConfig = from_yaml_str(yaml)?;
+        let config: AppConfig = serde_yaml::from_str(yaml)?;
         Ok(config)
     }
 
@@ -139,7 +138,6 @@ where
 // Custom duration deserializer that supports both humantime and ISO 8601 formats
 mod duration_serde {
     use super::ValueOrOption;
-    use humantime::parse_duration;
     use iso8601_duration::Duration as IsoDuration;
     use serde::de::Error as DeError;
     use serde::{Deserialize, Deserializer};
@@ -155,7 +153,7 @@ mod duration_serde {
             None => Ok(None),
             Some(s) => {
                 // Try humantime format first (e.g., "5s", "30s")
-                if let Ok(duration) = parse_duration(&s) {
+                if let Ok(duration) = humantime::parse_duration(&s) {
                     return Ok(Some(duration));
                 }
                 // Try ISO 8601 format (e.g., "PT5S", "PT30S")

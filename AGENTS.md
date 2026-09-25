@@ -10,9 +10,10 @@ Issues and specs for this repository MUST live in GitHub Issues. Agents MUST use
 
 Agents SHOULD read `docs/agents/domain.md` before exploring the codebase or naming domain concepts.
 
-## Coding style
+## Coding standards
 
-- Rust code MUST NOT panic. Agents MUST NOT use `unwrap`, `expect`, `panic!`, `todo!`, or `unreachable!`.
-- Fallible operations MUST return `Result` and use `?`.
-- Rust code SHOULD import the names it uses instead of fully qualified paths. For example, use `use std::io::Result as IoResult;`.
+Rust code MUST follow `CODING_STANDARDS.md`.
+
+## Repository rules
+
 - Agents MUST NOT modify `README.md` without the user's permission. Reference updates and typo fixes are the only exceptions.

@@ -2,12 +2,10 @@ use anyhow::{Result as TestResult, anyhow};
 use github_webhook_listener::{
     AppConfig,
     config::{HttpConfig, ProjectConfig},
-    server::start_server,
 };
 use hex::encode;
 use hmac::{Hmac, KeyInit, Mac};
 use reqwest::{Client, StatusCode};
-use serde_urlencoded::to_string;
 use sha1::Sha1;
 use sha2::Sha256;
 use std::collections::HashMap;
@@ -16,7 +14,6 @@ use std::time::Duration;
 use tempfile::TempDir;
 use tokio::{
     net::TcpListener,
-    spawn,
     time::{sleep, timeout},
 };
 
@@ -27,7 +24,7 @@ async fn start_test_server(mut config: AppConfig) -> TestResult<String> {
     let addr = config.http.bind_address();
     let url = format!("http://{}", addr);
 
-    let server = spawn(start_server(config));
+    let server = tokio::spawn(github_webhook_listener::server::start_server(config));
     let client = Client::new();
     timeout(Duration::from_secs(2), async {
         loop {
@@ -306,7 +303,7 @@ async fn form_encoded_github_payload_runs_matching_command() -> TestResult<()> {
     };
     let url = start_test_server(config).await?;
     let payload = r#"{"ref":"refs/heads/main"}"#;
-    let body = to_string([("payload", payload)])?;
+    let body = serde_urlencoded::to_string([("payload", payload)])?;
     let response = Client::new()
         .post(format!("{}/form-project", url))
         .header("Content-Type", "application/x-www-form-urlencoded")
