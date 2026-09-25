@@ -18,7 +18,8 @@ impl EventPayload {
         Ok(serde_json::from_str(json)?)
     }
 
-    /// Parses a GitHub form-encoded delivery, which wraps the JSON body in a `payload` field.
+    /// Parses a GitHub form-encoded delivery, which wraps the JSON body in a
+    /// `payload` field.
     pub fn from_form(form_data: &str) -> Result<Self> {
         #[derive(Deserialize)]
         struct GithubForm {
@@ -29,7 +30,8 @@ impl EventPayload {
         Self::from_json(&form.payload)
     }
 
-    /// Matches when the payload action equals the project filter (default `push`) and the git ref matches exactly.
+    /// Matches when the payload action equals the project filter (default
+    /// `push`) and the git ref matches exactly.
     pub fn should_process(&self, project: &ProjectConfig) -> bool {
         let action_matches = self.action.as_deref().unwrap_or("push") == project.action_filter();
         let ref_matches = self.git_ref.as_deref() == Some(&project.git_ref);

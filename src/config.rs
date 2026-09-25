@@ -64,7 +64,8 @@ impl ProjectConfig {
 }
 
 impl AppConfig {
-    /// Load configuration from a file, auto-detecting the format based on extension
+    /// Load configuration from a file, auto-detecting the format based on
+    /// extension
     pub fn from_file<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let path = path.as_ref();
         let contents = fs::read_to_string(path)?;
@@ -85,7 +86,8 @@ impl AppConfig {
         }
     }
 
-    /// Parses YAML configuration directly. Prefer `from_file`, which detects the format from the file extension.
+    /// Parses YAML configuration directly. Prefer `from_file`, which detects
+    /// the format from the file extension.
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let contents = fs::read_to_string(path)?;
         Self::from_yaml_str(&contents)
@@ -110,7 +112,8 @@ impl AppConfig {
     }
 }
 
-// Helper to deserialize values that can be either T or Option<T> (for hocon-rs compatibility)
+// Helper to deserialize values that can be either T or Option<T> (for hocon-rs
+// compatibility)
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum ValueOrOption<T> {
@@ -135,7 +138,8 @@ where
     Ok(ValueOrOption::<String>::deserialize(deserializer)?.into())
 }
 
-// Custom duration deserializer that supports both humantime and ISO 8601 formats
+// Custom duration deserializer that supports both humantime and ISO 8601
+// formats
 mod duration_serde {
     use super::ValueOrOption;
     use iso8601_duration::Duration as IsoDuration;

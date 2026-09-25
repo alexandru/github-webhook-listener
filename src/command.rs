@@ -27,7 +27,8 @@ impl CommandResult {
     }
 }
 
-/// Manages command execution with per-project locking to prevent concurrent runs
+/// Manages command execution with per-project locking to prevent concurrent
+/// runs
 pub struct CommandTrigger {
     projects: HashMap<String, ProjectConfig>,
     locks: SharedLock<HashMap<String, SharedLock<()>>>,
@@ -41,7 +42,9 @@ impl CommandTrigger {
         }
     }
 
-    /// Runs the command for `key` with the configured timeout. Calls for the same project are serialized; a timeout kills the command's process group.
+    /// Runs the command for `key` with the configured timeout. Calls for the
+    /// same project are serialized; a timeout kills the command's process
+    /// group.
     pub async fn trigger_command(&self, key: &str) -> Result<()> {
         let project = self
             .projects
@@ -126,7 +129,8 @@ async fn execute_shell_command(command: &str, directory: &str) -> Result<Command
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
-    // Run the shell in its own process group so a timeout can kill the shell and its children.
+    // Run the shell in its own process group so a timeout can kill the shell
+    // and its children.
     shell.as_std_mut().process_group(0);
     let mut child = shell
         .spawn()
@@ -153,7 +157,8 @@ async fn execute_shell_command(command: &str, directory: &str) -> Result<Command
     })
 }
 
-/// Reads a stream to the end, keeping at most `MAX_CAPTURED_OUTPUT_BYTES` and appending a truncation marker when more data arrives.
+/// Reads a stream to the end, keeping at most `MAX_CAPTURED_OUTPUT_BYTES` and
+/// appending a truncation marker when more data arrives.
 async fn capture_output<R: AsyncRead + Unpin>(mut stream: R) -> IoResult<String> {
     let mut output = Vec::new();
     let mut buffer = [0; 8192];
@@ -174,7 +179,8 @@ async fn capture_output<R: AsyncRead + Unpin>(mut stream: R) -> IoResult<String>
     Ok(result)
 }
 
-/// Kills the command's process group when dropped, including when the timeout drops the execution future.
+/// Kills the command's process group when dropped, including when the timeout
+/// drops the execution future.
 struct ProcessGroupGuard(Option<Pid>);
 
 impl Drop for ProcessGroupGuard {

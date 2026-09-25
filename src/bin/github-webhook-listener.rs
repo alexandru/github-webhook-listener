@@ -7,9 +7,10 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // `tracing_subscriber` turns `tracing::info!`/`debug!`/etc. calls made throughout the app
-    // into actual log output. Respect RUST_LOG if set, otherwise log this crate at info and HTTP
-    // request handling at debug, so webhook traffic can be inspected without recompiling.
+    // `tracing_subscriber` turns `tracing::info!`/`debug!`/etc. calls made
+    // throughout the app into actual log output. Respect RUST_LOG if set,
+    // otherwise log this crate at info and HTTP request handling at debug,
+    // so webhook traffic can be inspected without recompiling.
     tracing_subscriber::registry()
         .with(
             EnvFilter::try_from_default_env()

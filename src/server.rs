@@ -22,7 +22,8 @@ use tokio::{
 };
 use tracing::{error, info, warn};
 
-/// State shared by the HTTP handlers: the loaded configuration and the command queue.
+/// State shared by the HTTP handlers: the loaded configuration and the command
+/// queue.
 #[derive(Clone)]
 pub struct AppState {
     pub config: AppConfig,
@@ -54,7 +55,8 @@ pub async fn start_server(config: AppConfig) -> Result<()> {
     Ok(())
 }
 
-/// Maximum commands waiting in the queue. New deliveries get 503 when it is full.
+/// Maximum commands waiting in the queue. New deliveries get 503 when it is
+/// full.
 const QUEUE_CAPACITY: usize = 64;
 
 #[derive(Template)]
@@ -63,7 +65,8 @@ struct ProjectsTemplate {
     projects: Vec<String>,
 }
 
-/// Spawns the single worker that runs queued commands one at a time. The supervisor restarts the worker if it panics.
+/// Spawns the single worker that runs queued commands one at a time. The
+/// supervisor restarts the worker if it panics.
 fn start_command_worker(trigger: Arc<CommandTrigger>) -> Sender<String> {
     let (sender, receiver) = mpsc::channel::<String>(QUEUE_CAPACITY);
     let receiver = Arc::new(Mutex::new(receiver));
@@ -105,7 +108,8 @@ fn start_command_worker(trigger: Arc<CommandTrigger>) -> Sender<String> {
 fn routes(base_path: &str) -> Router<AppState> {
     let mut router = Router::new();
 
-    // Redirect base path without trailing slash to base path with trailing slash
+    // Redirect base path without trailing slash to base path with trailing
+    // slash
     if !base_path.is_empty() {
         let redirect_location = format!("{}/", base_path.trim_end_matches('/'));
         router = router.route(
