@@ -44,6 +44,7 @@ thiserror = "2.0"
 humantime-serde = "1.1"
 humantime = "2.4"
 iso8601-duration = "0.2"
+nix = { version = "0.30", features = ["signal", "process"] }
 
 # HTML rendering
 askama = "0.16"

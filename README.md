@@ -142,6 +142,8 @@ NOTEs on those fields:
 1. the Payload URL contains a `some-id`, in the described path, that should be configured in your `config.yaml` file to identify your project
 2. the Secret is the passphrase you also configured in `config.yaml` — this is optional, but if the `config.yaml` mentions a passphrase which you're not mentioning in this setup, then requests will fail
 
+Webhook requests with a matching ref and action return HTTP 202 after the command is queued. One background worker runs commands one at a time. The queue holds up to 64 waiting commands and returns HTTP 503 when full. Queued commands are kept in memory and are lost if the server restarts. Command failures are logged on the server; they are not returned to the webhook sender. For form-encoded deliveries, the listener reads the JSON from the `payload` field.
+
 ## Development
 
 The project is written in [Rust](https://www.rust-lang.org/). To install the toolchain, which must include [Cargo](https://doc.rust-lang.org/cargo/), see [rustup](https://rustup.rs/).

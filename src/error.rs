@@ -2,23 +2,28 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use serde_json::Error as JsonError;
+use serde_urlencoded::de::Error as UrlEncodedError;
+use serde_yaml::Error as YamlError;
+use std::io::Error as IoError;
+use std::result::Result as StdResult;
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, AppError>;
+pub type Result<T> = StdResult<T, AppError>;
 
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(#[from] IoError),
 
     #[error("YAML parse error: {0}")]
-    Yaml(#[from] serde_yaml::Error),
+    Yaml(#[from] YamlError),
 
     #[error("JSON parse error: {0}")]
-    Json(#[from] serde_json::Error),
+    Json(#[from] JsonError),
 
     #[error("URL-encoded parse error: {0}")]
-    UrlEncoded(#[from] serde_urlencoded::de::Error),
+    UrlEncoded(#[from] UrlEncodedError),
 
     #[error("Bad request: {0}")]
     BadRequest(String),

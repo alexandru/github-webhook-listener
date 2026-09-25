@@ -1,7 +1,10 @@
+use anyhow::Result;
 use clap::Parser;
 use github_webhook_listener::{AppConfig, server::start_server};
 use std::path::PathBuf;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{
+    EnvFilter, fmt::layer as fmt_layer, layer::SubscriberExt, registry, util::SubscriberInitExt,
+};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -14,14 +17,14 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
     // Initialize tracing
-    tracing_subscriber::registry()
+    registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
+            EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "github_webhook_listener=info,tower_http=debug".into()),
         )
-        .with(tracing_subscriber::fmt::layer())
+        .with(fmt_layer())
         .init();
 
     // Parse command line arguments

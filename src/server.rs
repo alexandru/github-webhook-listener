@@ -10,9 +10,52 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
+    serve,
 };
+use std::str::from_utf8;
 use std::sync::Arc;
-use tracing::{info, warn};
+use tokio::{
+    net::TcpListener,
+    spawn,
+    sync::{
+        Mutex,
+        mpsc::{Sender, channel, error::TrySendError},
+    },
+};
+use tracing::{error, info, warn};
+
+#[derive(Clone)]
+pub struct AppState {
+    pub config: AppConfig,
+    command_queue: Sender<String>,
+}
+
+pub async fn start_server(config: AppConfig) -> Result<()> {
+    let command_trigger = Arc::new(CommandTrigger::new(config.projects.clone()));
+    let command_queue = start_command_worker(command_trigger);
+    let state = AppState {
+        config: config.clone(),
+        command_queue,
+    };
+
+    let base_path = config.http.base_path();
+    let app = routes(&base_path).with_state(state);
+
+    let addr = config.http.bind_address();
+    info!("Starting server on {}", addr);
+
+    let listener = TcpListener::bind(&addr)
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to bind to {}: {}", addr, e)))?;
+
+    serve(listener, app)
+        .await
+        .map_err(|e| AppError::Internal(format!("Server error: {}", e)))?;
+
+    Ok(())
+}
+
+const QUEUE_CAPACITY: usize = 64;
 
 #[derive(Template)]
 #[template(path = "projects.html")]
@@ -20,10 +63,42 @@ struct ProjectsTemplate {
     projects: Vec<String>,
 }
 
-#[derive(Clone)]
-pub struct AppState {
-    pub config: AppConfig,
-    pub command_trigger: Arc<CommandTrigger>,
+fn start_command_worker(trigger: Arc<CommandTrigger>) -> Sender<String> {
+    let (sender, receiver) = channel::<String>(QUEUE_CAPACITY);
+    let receiver = Arc::new(Mutex::new(receiver));
+
+    spawn(async move {
+        loop {
+            let receiver = receiver.clone();
+            let trigger = trigger.clone();
+            let worker = spawn(async move {
+                loop {
+                    let Some(project_key) = receiver.lock().await.recv().await else {
+                        break;
+                    };
+                    let trigger = trigger.clone();
+                    let task = spawn(async move {
+                        let result = trigger.trigger_command(&project_key).await;
+                        (project_key, result)
+                    });
+                    match task.await {
+                        Ok((key, Ok(()))) => info!("Command completed for project `{}`", key),
+                        Ok((key, Err(err))) => {
+                            error!("Command failed for project `{}`: {}", key, err)
+                        }
+                        Err(err) => error!("Command task failed: {}", err),
+                    }
+                }
+            });
+
+            match worker.await {
+                Ok(()) => break,
+                Err(err) => error!("Command worker stopped unexpectedly; restarting: {}", err),
+            }
+        }
+    });
+
+    sender
 }
 
 fn routes(base_path: &str) -> Router<AppState> {
@@ -51,30 +126,6 @@ fn routes(base_path: &str) -> Router<AppState> {
     router
 }
 
-pub async fn start_server(config: AppConfig) -> Result<()> {
-    let command_trigger = Arc::new(CommandTrigger::new(config.projects.clone()));
-    let state = AppState {
-        config: config.clone(),
-        command_trigger,
-    };
-
-    let base_path = config.http.base_path();
-    let app = routes(&base_path).with_state(state);
-
-    let addr = config.http.bind_address();
-    info!("Starting server on {}", addr);
-
-    let listener = tokio::net::TcpListener::bind(&addr)
-        .await
-        .map_err(|e| AppError::Internal(format!("Failed to bind to {}: {}", addr, e)))?;
-
-    axum::serve(listener, app)
-        .await
-        .map_err(|e| AppError::Internal(format!("Server error: {}", e)))?;
-
-    Ok(())
-}
-
 async fn list_projects(State(state): State<AppState>) -> Html<String> {
     let projects: Vec<String> = state.config.projects.keys().cloned().collect();
 
@@ -99,7 +150,7 @@ async fn handle_webhook(
         })?;
 
     // Get body as string
-    let body_str = std::str::from_utf8(&body)
+    let body_str = from_utf8(&body)
         .map_err(|_| AppError::BadRequest("Invalid UTF-8 in request body".to_string()))?;
 
     // Verify signature
@@ -133,13 +184,18 @@ async fn handle_webhook(
         return Ok((StatusCode::OK, "Nothing to do").into_response());
     }
 
-    // Execute the command
-    state
-        .command_trigger
-        .trigger_command(&project_key)
-        .await
-        .inspect(|_| info!("POST /{} — OK", project_key))
-        .inspect_err(|e| warn!("POST /{} — Error: {}", project_key, e))?;
-
-    Ok((StatusCode::OK, "OK").into_response())
+    match state.command_queue.try_send(project_key.clone()) {
+        Ok(()) => {
+            info!("POST /{} — Accepted", project_key);
+            Ok((StatusCode::ACCEPTED, "Accepted").into_response())
+        }
+        Err(TrySendError::Full(_)) => {
+            warn!("POST /{} — Queue full", project_key);
+            Ok((StatusCode::SERVICE_UNAVAILABLE, "Queue full").into_response())
+        }
+        Err(TrySendError::Closed(_)) => {
+            error!("POST /{} — Command worker unavailable", project_key);
+            Ok((StatusCode::SERVICE_UNAVAILABLE, "Worker unavailable").into_response())
+        }
+    }
 }

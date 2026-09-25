@@ -1,7 +1,10 @@
 use crate::config::ProjectConfig;
 use crate::error::{AppError, Result};
+use hex::decode;
 use hmac::{Hmac, KeyInit, Mac};
 use serde::{Deserialize, Serialize};
+use serde_json::from_str as from_json_str;
+use serde_urlencoded::from_str as from_form_str;
 use sha1::Sha1;
 use sha2::Sha256;
 
@@ -16,12 +19,18 @@ pub struct EventPayload {
 impl EventPayload {
     /// Parse JSON payload
     pub fn from_json(json: &str) -> Result<Self> {
-        Ok(serde_json::from_str(json)?)
+        Ok(from_json_str(json)?)
     }
 
     /// Parse form-urlencoded payload
     pub fn from_form(form_data: &str) -> Result<Self> {
-        Ok(serde_urlencoded::from_str(form_data)?)
+        #[derive(Deserialize)]
+        struct GithubForm {
+            payload: String,
+        }
+
+        let form: GithubForm = from_form_str(form_data)?;
+        Self::from_json(&form.payload)
     }
 
     /// Check if this payload should trigger the project
@@ -76,7 +85,7 @@ where
 
     mac.update(body.as_bytes());
 
-    let expected = hex::decode(expected_hex)
+    let expected = decode(expected_hex)
         .map_err(|_| AppError::Forbidden("Invalid signature format".to_string()))?;
 
     mac.verify_slice(&expected)
