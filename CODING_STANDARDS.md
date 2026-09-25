@@ -2,6 +2,8 @@
 
 These rules apply to the Rust code in this repository and use RFC 2119 keywords.
 
+Use the `rust-skills` skill when writing, reviewing, or refactoring Rust code.
+
 ## Panics
 
 Rust code MUST NOT panic. Agents MUST NOT use `unwrap`, `expect`, `panic!`, `todo!`, or `unreachable!`.

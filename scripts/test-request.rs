@@ -12,7 +12,7 @@ hex = "0.4"
 ---
 
 use hex::encode;
-use hmac::{Hmac, KeyInit, Mac};
+use hmac::{Hmac, Mac};
 use reqwest::blocking::Client;
 use sha1::Sha1;
 use sha2::Sha256;
