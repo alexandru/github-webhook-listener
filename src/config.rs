@@ -1,67 +1,10 @@
+use crate::error::{AppError, Result as AppResult};
+use hocon_rs::Config as HoconConfig;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
-
-// Helper to deserialize values that can be either T or Option<T> (for hocon-rs compatibility)
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum ValueOrOption<T> {
-    Value(T),
-    Opt(Option<T>),
-}
-
-impl<T> From<ValueOrOption<T>> for Option<T> {
-    fn from(value: ValueOrOption<T>) -> Self {
-        match value {
-            ValueOrOption::Value(v) => Some(v),
-            ValueOrOption::Opt(o) => o,
-        }
-    }
-}
-
-// Custom deserializer for Option<String> that works with hocon-rs
-fn option_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Ok(ValueOrOption::<String>::deserialize(deserializer)?.into())
-}
-
-// Custom duration deserializer that supports both humantime and ISO 8601 formats
-mod duration_serde {
-    use super::ValueOrOption;
-    use serde::{Deserialize, Deserializer};
-    use std::time::Duration;
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s: Option<String> = ValueOrOption::<String>::deserialize(deserializer)?.into();
-
-        match s {
-            None => Ok(None),
-            Some(s) => {
-                // Try humantime format first (e.g., "5s", "30s")
-                if let Ok(duration) = humantime::parse_duration(&s) {
-                    return Ok(Some(duration));
-                }
-                // Try ISO 8601 format (e.g., "PT5S", "PT30S")
-                if let Ok(duration) = iso8601_duration::Duration::parse(&s) {
-                    let seconds = duration.num_seconds().unwrap_or(0.0).max(0.0) as u64;
-                    let std_duration = Duration::from_secs(seconds);
-                    return Ok(Some(std_duration));
-                }
-                Err(serde::de::Error::custom(format!(
-                    "Invalid duration format: {}. Expected humantime (e.g., '5s') or ISO 8601 (e.g., 'PT5S')",
-                    s
-                )))
-            }
-        }
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AppConfig {
@@ -121,8 +64,9 @@ impl ProjectConfig {
 }
 
 impl AppConfig {
-    /// Load configuration from a file, auto-detecting the format based on extension
-    pub fn from_file<P: AsRef<Path>>(path: P) -> crate::Result<Self> {
+    /// Load configuration from a file, auto-detecting the format based on
+    /// extension
+    pub fn from_file<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let path = path.as_ref();
         let contents = fs::read_to_string(path)?;
 
@@ -142,28 +86,92 @@ impl AppConfig {
         }
     }
 
-    /// Parse YAML configuration (deprecated, use from_file)
-    pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> crate::Result<Self> {
+    /// Parses YAML configuration directly. Prefer `from_file`, which detects
+    /// the format from the file extension.
+    pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let contents = fs::read_to_string(path)?;
         Self::from_yaml_str(&contents)
     }
 
-    pub fn from_yaml_str(yaml: &str) -> crate::Result<Self> {
+    pub fn from_yaml_str(yaml: &str) -> AppResult<Self> {
         let config: AppConfig = serde_yaml::from_str(yaml)?;
         Ok(config)
     }
 
     /// Parse HOCON configuration
-    pub fn from_hocon_file<P: AsRef<Path>>(path: P) -> crate::Result<Self> {
+    pub fn from_hocon_file<P: AsRef<Path>>(path: P) -> AppResult<Self> {
         let contents = fs::read_to_string(path)?;
         Self::from_hocon_str(&contents)
     }
 
-    pub fn from_hocon_str(hocon: &str) -> crate::Result<Self> {
+    pub fn from_hocon_str(hocon: &str) -> AppResult<Self> {
         // Parse HOCON and deserialize directly with serde
-        let config: AppConfig = hocon_rs::Config::parse_str(hocon, None)
-            .map_err(|e| crate::AppError::Internal(format!("HOCON parse error: {}", e)))?;
+        let config: AppConfig = HoconConfig::parse_str(hocon, None)
+            .map_err(|e| AppError::Internal(format!("HOCON parse error: {}", e)))?;
         Ok(config)
+    }
+}
+
+// Helper to deserialize values that can be either T or Option<T> (for hocon-rs
+// compatibility)
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ValueOrOption<T> {
+    Value(T),
+    Opt(Option<T>),
+}
+
+impl<T> From<ValueOrOption<T>> for Option<T> {
+    fn from(value: ValueOrOption<T>) -> Self {
+        match value {
+            ValueOrOption::Value(v) => Some(v),
+            ValueOrOption::Opt(o) => o,
+        }
+    }
+}
+
+// Custom deserializer for Option<String> that works with hocon-rs
+fn option_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Ok(ValueOrOption::<String>::deserialize(deserializer)?.into())
+}
+
+// Custom duration deserializer that supports both humantime and ISO 8601
+// formats
+mod duration_serde {
+    use super::ValueOrOption;
+    use iso8601_duration::Duration as IsoDuration;
+    use serde::de::Error as DeError;
+    use serde::{Deserialize, Deserializer};
+    use std::time::Duration;
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: Option<String> = ValueOrOption::<String>::deserialize(deserializer)?.into();
+
+        match s {
+            None => Ok(None),
+            Some(s) => {
+                // Try humantime format first (e.g., "5s", "30s")
+                if let Ok(duration) = humantime::parse_duration(&s) {
+                    return Ok(Some(duration));
+                }
+                // Try ISO 8601 format (e.g., "PT5S", "PT30S")
+                if let Ok(duration) = IsoDuration::parse(&s) {
+                    let seconds = duration.num_seconds().unwrap_or(0.0).max(0.0) as u64;
+                    let std_duration = Duration::from_secs(seconds);
+                    return Ok(Some(std_duration));
+                }
+                Err(DeError::custom(format!(
+                    "Invalid duration format: {}. Expected humantime (e.g., '5s') or ISO 8601 (e.g., 'PT5S')",
+                    s
+                )))
+            }
+        }
     }
 }
 

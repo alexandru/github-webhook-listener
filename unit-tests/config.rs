@@ -1,7 +1,8 @@
 use super::*;
+use anyhow::{Result as TestResult, anyhow};
 
 #[test]
-fn test_parse_yaml_config() {
+fn test_parse_yaml_config() -> TestResult<()> {
     let yaml = r#"
 http:
   host: "0.0.0.0"
@@ -16,17 +17,21 @@ projects:
     timeout: "5s"
     secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
 "#;
-    let config = AppConfig::from_yaml_str(yaml).unwrap();
+    let config = AppConfig::from_yaml_str(yaml)?;
     assert_eq!(config.http.port, 8080);
     assert_eq!(config.http.host, Some("0.0.0.0".to_string()));
     assert_eq!(config.projects.len(), 1);
 
-    let project = config.projects.get("myproject").unwrap();
+    let project = config
+        .projects
+        .get("myproject")
+        .ok_or_else(|| anyhow!("missing myproject configuration"))?;
     assert_eq!(project.git_ref, "refs/heads/gh-pages");
     assert_eq!(project.directory, "/tmp");
     assert_eq!(project.command, "touch ./i-was-here.txt");
     assert_eq!(project.secret, "xxxxxxxxxxxxxxxxxxxxxxxxxx");
     assert_eq!(project.timeout_duration(), Duration::from_secs(5));
+    Ok(())
 }
 
 #[test]
@@ -54,7 +59,7 @@ fn test_base_path() {
 }
 
 #[test]
-fn test_parse_hocon_config() {
+fn test_parse_hocon_config() -> TestResult<()> {
     let hocon = r#"
 http {
   host: "0.0.0.0"
@@ -73,21 +78,25 @@ projects {
   }
 }
 "#;
-    let config = AppConfig::from_hocon_str(hocon).unwrap();
+    let config = AppConfig::from_hocon_str(hocon)?;
     assert_eq!(config.http.port, 8080);
     assert_eq!(config.http.host, Some("0.0.0.0".to_string()));
     assert_eq!(config.projects.len(), 1);
 
-    let project = config.projects.get("myproject").unwrap();
+    let project = config
+        .projects
+        .get("myproject")
+        .ok_or_else(|| anyhow!("missing myproject configuration"))?;
     assert_eq!(project.git_ref, "refs/heads/gh-pages");
     assert_eq!(project.directory, "/tmp");
     assert_eq!(project.command, "touch ./i-was-here.txt");
     assert_eq!(project.secret, "xxxxxxxxxxxxxxxxxxxxxxxxxx");
     assert_eq!(project.timeout_duration(), Duration::from_secs(5));
+    Ok(())
 }
 
 #[test]
-fn test_parse_yaml_with_humantime() {
+fn test_parse_yaml_with_humantime() -> TestResult<()> {
     let yaml = r#"
 http:
   host: "0.0.0.0"
@@ -102,7 +111,11 @@ projects:
     timeout: "5s"
     secret: "xxxxxxxxxxxxxxxxxxxxxxxxxx"
 "#;
-    let config = AppConfig::from_yaml_str(yaml).unwrap();
-    let project = config.projects.get("myproject").unwrap();
+    let config = AppConfig::from_yaml_str(yaml)?;
+    let project = config
+        .projects
+        .get("myproject")
+        .ok_or_else(|| anyhow!("missing myproject configuration"))?;
     assert_eq!(project.timeout_duration(), Duration::from_secs(5));
+    Ok(())
 }

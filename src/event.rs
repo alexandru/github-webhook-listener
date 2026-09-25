@@ -14,24 +14,31 @@ pub struct EventPayload {
 }
 
 impl EventPayload {
-    /// Parse JSON payload
     pub fn from_json(json: &str) -> Result<Self> {
         Ok(serde_json::from_str(json)?)
     }
 
-    /// Parse form-urlencoded payload
+    /// Parses a GitHub form-encoded delivery, which wraps the JSON body in a
+    /// `payload` field.
     pub fn from_form(form_data: &str) -> Result<Self> {
-        Ok(serde_urlencoded::from_str(form_data)?)
+        #[derive(Deserialize)]
+        struct GithubForm {
+            payload: String,
+        }
+
+        let form: GithubForm = serde_urlencoded::from_str(form_data)?;
+        Self::from_json(&form.payload)
     }
 
-    /// Check if this payload should trigger the project
+    /// Matches when the payload action equals the project filter (default
+    /// `push`) and the git ref matches exactly.
     pub fn should_process(&self, project: &ProjectConfig) -> bool {
         let action_matches = self.action.as_deref().unwrap_or("push") == project.action_filter();
         let ref_matches = self.git_ref.as_deref() == Some(&project.git_ref);
         action_matches && ref_matches
     }
 
-    /// Verify HMAC signature
+    /// Verifies the GitHub HMAC signature over the raw request body.
     pub fn verify_signature(
         body: &str,
         secret: &str,

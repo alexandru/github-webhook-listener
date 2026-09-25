@@ -1,16 +1,19 @@
 use crate::config::ProjectConfig;
 use crate::error::{AppError, Result};
+use nix::sys::signal::Signal;
+use nix::unistd::Pid;
 use std::collections::HashMap;
+use std::io::Result as IoResult;
+use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::Arc;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::process::Command;
 use tokio::sync::Mutex;
-use tokio::time::timeout;
 use tracing::{debug, error, info};
 
-/// Result type for command execution containing exit code and output
+/// Outcome of a shell command: its exit code and captured output.
 #[derive(Debug)]
 pub struct CommandResult {
     pub exit_code: i32,
@@ -24,9 +27,8 @@ impl CommandResult {
     }
 }
 
-type SharedLock<T> = Arc<Mutex<T>>;
-
-/// Manages command execution with per-project locking to prevent concurrent runs
+/// Manages command execution with per-project locking to prevent concurrent
+/// runs
 pub struct CommandTrigger {
     projects: HashMap<String, ProjectConfig>,
     locks: SharedLock<HashMap<String, SharedLock<()>>>,
@@ -40,14 +42,9 @@ impl CommandTrigger {
         }
     }
 
-    async fn get_lock(&self, key: &str) -> SharedLock<()> {
-        let mut locks = self.locks.lock().await;
-        locks
-            .entry(key.to_string())
-            .or_insert_with(|| Arc::new(Mutex::new(())))
-            .clone()
-    }
-
+    /// Runs the command for `key` with the configured timeout. Calls for the
+    /// same project are serialized; a timeout kills the command's process
+    /// group.
     pub async fn trigger_command(&self, key: &str) -> Result<()> {
         let project = self
             .projects
@@ -59,7 +56,7 @@ impl CommandTrigger {
 
         info!("Executing command for project `{}`", key);
 
-        let result = timeout(
+        let result = tokio::time::timeout(
             timeout_duration,
             execute_shell_command_locked(lock, &project.command, &project.directory),
         )
@@ -92,6 +89,20 @@ impl CommandTrigger {
     }
 }
 
+impl CommandTrigger {
+    async fn get_lock(&self, key: &str) -> SharedLock<()> {
+        let mut locks = self.locks.lock().await;
+        locks
+            .entry(key.to_string())
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone()
+    }
+}
+
+type SharedLock<T> = Arc<Mutex<T>>;
+
+const MAX_CAPTURED_OUTPUT_BYTES: usize = 64 * 1024;
+
 async fn execute_shell_command_locked(
     lock: SharedLock<()>,
     command: &str,
@@ -110,42 +121,76 @@ async fn execute_shell_command(command: &str, directory: &str) -> Result<Command
         )));
     }
 
-    let mut child = Command::new("/bin/sh")
+    let mut shell = Command::new("/bin/sh");
+    shell
         .arg("-c")
         .arg(command)
         .current_dir(dir_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    // Run the shell in its own process group so a timeout can kill the shell
+    // and its children.
+    shell.as_std_mut().process_group(0);
+    let mut child = shell
         .spawn()
         .map_err(|e| AppError::Internal(format!("Failed to spawn command: {}", e)))?;
+    let mut group = ProcessGroupGuard(child.id().map(|id| Pid::from_raw(id as i32)));
 
-    let mut stdout = String::new();
-    let mut stderr = String::new();
-
-    if let Some(mut stdout_stream) = child.stdout.take() {
-        stdout_stream
-            .read_to_string(&mut stdout)
-            .await
-            .map_err(|e| AppError::Internal(format!("Failed to read stdout: {}", e)))?;
-    }
-
-    if let Some(mut stderr_stream) = child.stderr.take() {
-        stderr_stream
-            .read_to_string(&mut stderr)
-            .await
-            .map_err(|e| AppError::Internal(format!("Failed to read stderr: {}", e)))?;
-    }
-
-    let status = child
-        .wait()
-        .await
-        .map_err(|e| AppError::Internal(format!("Failed to wait for command: {}", e)))?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| AppError::Internal("Failed to capture command stdout".to_string()))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| AppError::Internal("Failed to capture command stderr".to_string()))?;
+    let (stdout, stderr, status) =
+        tokio::try_join!(capture_output(stdout), capture_output(stderr), child.wait(),)
+            .map_err(|e| AppError::Internal(format!("Failed to wait for command: {}", e)))?;
+    group.0 = None;
 
     Ok(CommandResult {
         exit_code: status.code().unwrap_or(-1),
         stdout,
         stderr,
     })
+}
+
+/// Reads a stream to the end, keeping at most `MAX_CAPTURED_OUTPUT_BYTES` and
+/// appending a truncation marker when more data arrives.
+async fn capture_output<R: AsyncRead + Unpin>(mut stream: R) -> IoResult<String> {
+    let mut output = Vec::new();
+    let mut buffer = [0; 8192];
+    let mut truncated = false;
+    loop {
+        let count = stream.read(&mut buffer).await?;
+        if count == 0 {
+            break;
+        }
+        let remaining = MAX_CAPTURED_OUTPUT_BYTES.saturating_sub(output.len());
+        output.extend_from_slice(&buffer[..count.min(remaining)]);
+        truncated |= count > remaining;
+    }
+    let mut result = String::from_utf8_lossy(&output).into_owned();
+    if truncated {
+        result.push_str("\n[output truncated]");
+    }
+    Ok(result)
+}
+
+/// Kills the command's process group when dropped, including when the timeout
+/// drops the execution future.
+struct ProcessGroupGuard(Option<Pid>);
+
+impl Drop for ProcessGroupGuard {
+    fn drop(&mut self) {
+        if let Some(group) = self.0
+            && let Err(err) = nix::sys::signal::killpg(group, Signal::SIGKILL)
+        {
+            debug!("Could not stop command process group {}: {}", group, err);
+        }
+    }
 }
 
 #[cfg(test)]
